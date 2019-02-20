@@ -1,0 +1,68 @@
+import java.nio.file.Files
+import java.nio.file.Paths
+
+buildscript {
+    repositories {
+        mavenCentral()
+        jcenter()
+    }
+}
+
+plugins {
+    id 'maven-publish'
+    id 'java-gradle-plugin'
+    id 'org.jetbrains.kotlin.jvm' version "1.3.20"
+}
+
+// Load `local.properties` file, if it exists. You can put your bintrayUser and bintrayApiKey values there, that file is ignored by git
+if (Files.exists(Paths.get("$project.rootDir/local.properties"))) {
+    def localProperties = new Properties()
+    localProperties.load(new FileInputStream("$project.rootDir/local.properties"))
+    localProperties.each { prop -> project.ext.set(prop.key, prop.value) }
+}
+
+repositories {
+    mavenCentral()
+    jcenter()
+    gradlePluginPortal()
+    maven { url 'https://dl.bintray.com/kotlin/kotlin-eap' }
+    maven { url 'https://dl.bintray.com/kotlin/kotlin-dev' }
+}
+
+gradlePlugin {
+    plugins {
+        kotlinInfraPlugin {
+            id = "kotlinx.team.infra"
+            implementationClass = "kotlinx.team.infra.InfraPlugin"
+        }
+    }
+}
+
+sourceSets {
+    main {
+        kotlin.srcDirs = ['main/src']
+        java.srcDirs = ['main/src']
+        resources.srcDirs = ['main/resources']
+    }
+    test {
+        kotlin.srcDirs = ['test/src']
+        java.srcDirs = ['test/src']
+        resources.srcDirs = ['test/resources']
+    }
+}
+
+dependencies {
+    compile group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib', version: kotlin_version
+    compile group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib-jdk7', version: kotlin_version
+    compile group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib-jdk8', version: kotlin_version
+
+    compile group: 'com.moowork.node', name: 'com.moowork.node.gradle.plugin', version: '1.2.0'
+
+    compileOnly group: 'org.jetbrains.kotlin.multiplatform', name: 'org.jetbrains.kotlin.multiplatform.gradle.plugin', version: kotlin_version
+
+    testImplementation "org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version"
+    testImplementation gradleTestKit()
+    testImplementation 'junit:junit:4.12'
+}
+
+apply from: 'publish.gradle'
