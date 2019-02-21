@@ -1,19 +1,51 @@
 package kotlinx.team.infra
 
+import groovy.lang.*
 import org.gradle.api.*
 import org.gradle.api.publish.*
 import org.gradle.api.publish.maven.plugins.*
 import org.gradle.api.publish.maven.tasks.*
 import org.gradle.api.publish.plugins.*
 import org.gradle.api.tasks.*
+import org.gradle.util.*
 import java.net.*
 import java.text.*
 import java.util.*
 
+open class PublishingConfiguration {
+    val bintray = BintrayConfiguration()
+    fun bintray(configureClosure: Closure<BintrayConfiguration>) {
+        ConfigureUtil.configureSelf(configureClosure, bintray)
+        bintrayHandler?.invoke(bintray)
+    }
+
+    private var bintrayHandler: ((BintrayConfiguration) -> Unit)? = null
+    internal fun afterBintray(handler: (BintrayConfiguration) -> Unit) {
+        bintrayHandler = handler
+    }
+
+    var includeProjects: MutableList<String> = mutableListOf()
+    fun include(name: String) {
+        includeProjects.add(name)
+    }
+}
+
+open class BintrayConfiguration {
+    var username: String? = null
+    var password: String? = null
+
+    var organization: String? = null
+    var repository: String? = null
+    var library: String? = null
+
+    var publish: Boolean = false
+}
+
 fun Project.configurePublishing(publishing: PublishingConfiguration) {
     // Apply maven-publish to all included subprojects
+    val includeProjects = publishing.includeProjects.map { project(it) }
     subprojects { subproject ->
-        if (subproject.name in publishing.includeProjects) {
+        if (subproject in includeProjects) {
             subproject.applyMavenPublish()
             subproject.createBuildRepository("buildLocal")
         }
@@ -25,7 +57,7 @@ fun Project.configurePublishing(publishing: PublishingConfiguration) {
     if (enableBintray) {
         createBintrayVersionTask(bintray)
         subprojects { subproject ->
-            if (subproject.name in publishing.includeProjects) {
+            if (subproject in includeProjects) {
                 subproject.createBintrayRepository(bintray)
             }
         }
@@ -33,14 +65,14 @@ fun Project.configurePublishing(publishing: PublishingConfiguration) {
 }
 
 private fun Project.applyMavenPublish() {
-    logger.info("INFRA: Enabling maven-publish plugin in $this")
+    logger.infra("Enabling maven-publish plugin in $this")
     pluginManager.apply(MavenPublishPlugin::class.java)
 }
 
 private fun Project.createBuildRepository(name: String) {
     val dir = rootProject.buildDir.resolve("maven")
 
-    logger.info("INFRA: Enabling publishing to $name in $this")
+    logger.infra("Enabling publishing to $name in $this")
     val compositeTask = task<DefaultTask>("publishTo${name.capitalize()}") {
         group = PublishingPlugin.PUBLISH_TASK_GROUP
         description = "Publishes all Maven publications produced by this project to Maven repository '$name'"
@@ -51,12 +83,12 @@ private fun Project.createBuildRepository(name: String) {
             repo.name = name
             repo.setUrl(dir)
         }
-        
+
         afterEvaluate {
             tasks.named("clean", Delete::class.java) {
                 delete(dir)
             }
-            
+
             tasks.withType(PublishToMavenRepository::class.java) { task ->
                 if (task.repository == repo) {
                     compositeTask.get().dependsOn(task)
@@ -68,7 +100,7 @@ private fun Project.createBuildRepository(name: String) {
 
 private fun Project.verifyBintrayConfiguration(bintray: BintrayConfiguration): Boolean {
     fun missing(what: String): Boolean {
-        logger.warn("INFRA: Bintray configuration is missing '$what', publishing will not be possible")
+        logger.warn("Bintray configuration is missing '$what', publishing will not be possible")
         return false
     }
 
@@ -79,7 +111,7 @@ private fun Project.verifyBintrayConfiguration(bintray: BintrayConfiguration): B
     val repository = bintray.repository ?: return missing("repository")
     val library = bintray.library ?: return missing("library")
 
-    logger.info("INFRA: Enabling publishing to Bintray for package '$library' in '$organization/$repository' repository in $this")
+    logger.infra("Enabling publishing to Bintray for package '$library' in '$organization/$repository' repository in $this")
     return true
 }
 
@@ -134,9 +166,9 @@ fun Project.createBintrayVersionTask(bintray: BintrayConfiguration) {
             val encodedAuthorization =
                 java.util.Base64.getMimeEncoder().encode(("$username:$password").toByteArray())
 
-            logger.lifecycle("INFRA: Creating version ${project.version} for package $library in $organization/$repository on bintray…")
-            logger.info("INFRA: User: $username")
-            logger.info("INFRA: Sending: $versionJson")
+            logger.lifecycle("Creating version ${project.version} for package $library in $organization/$repository on bintray…")
+            logger.infra("User: $username")
+            logger.infra("Sending: $versionJson")
             val connection = (url.openConnection() as HttpURLConnection).apply {
                 doOutput = true
                 requestMethod = "POST"

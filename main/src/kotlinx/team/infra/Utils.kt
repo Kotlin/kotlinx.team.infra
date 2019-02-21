@@ -2,6 +2,7 @@ package kotlinx.team.infra
 
 import groovy.lang.*
 import org.gradle.api.*
+import org.gradle.api.logging.*
 import org.gradle.api.tasks.*
 import java.io.*
 
@@ -43,12 +44,16 @@ class KotlinClosure1<in T : Any?, V : Any>(
 fun <T> Any.closureOf(action: T.() -> Unit): Closure<Any?> =
     KotlinClosure1(action, this, this)
 
-fun <T> Any.tryGetClass(className: String): Class<T>? {
-    val classLoader = javaClass.classLoader
+fun <T> Project.tryGetClass(className: String): Class<T>? {
+    val classLoader = buildscript.classLoader
     return try {
         Class.forName(className, false, classLoader) as Class<T>
     } catch (e: ClassNotFoundException) {
         null
     }
+}
+
+fun Logger.infra(message: String) {
+    lifecycle("INFRA: $message")
 }
 

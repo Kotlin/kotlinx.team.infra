@@ -6,9 +6,7 @@ import org.gradle.util.*
 
 open class InfraExtension(val project: Project) {
     val publishing = PublishingConfiguration()
-
     private var publishingHandler: ((PublishingConfiguration) -> Unit)? = null
-
     internal fun afterPublishing(handler: (PublishingConfiguration) -> Unit) {
         publishingHandler = handler
     }
@@ -16,35 +14,19 @@ open class InfraExtension(val project: Project) {
     fun publishing(configureClosure: Closure<PublishingConfiguration>) {
         ConfigureUtil.configureSelf(configureClosure, publishing)
         publishingHandler?.invoke(publishing)
+    }    
+    
+    
+    val node = NodeConfiguration()
+    private var nodeHandler: ((NodeConfiguration) -> Unit)? = null
+    internal fun afterNode(handler: (NodeConfiguration) -> Unit) {
+        nodeHandler = handler
+    }
+
+    fun node(configureClosure: Closure<NodeConfiguration>) {
+        ConfigureUtil.configureSelf(configureClosure, node)
+        nodeHandler?.invoke(node)
     }
 }
 
-open class PublishingConfiguration {
-    val bintray = BintrayConfiguration()
-    fun bintray(configureClosure: Closure<BintrayConfiguration>) {
-        ConfigureUtil.configureSelf(configureClosure, bintray)
-        bintrayHandler?.invoke(bintray)
-    }
 
-    private var bintrayHandler: ((BintrayConfiguration) -> Unit)? = null
-    internal fun afterBintray(handler: (BintrayConfiguration) -> Unit) {
-        bintrayHandler = handler
-    }
-
-    var includeProjects: MutableList<String> = mutableListOf()
-    fun include(name: String) {
-        includeProjects.add(name)
-    }
-}
-
-open class BintrayConfiguration {
-    var username: String? = null
-    var password: String? = null
-
-    var organization: String? = null
-    var repository: String? = null
-    var library: String? = null
-
-    var publish: Boolean = false
-
-}

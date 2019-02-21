@@ -25,6 +25,9 @@ class InfraPlugin : Plugin<Project> {
         extension.afterPublishing {
             configurePublishing(it)
         }
+        extension.afterNode {
+            configureNode(it)
+        }
 
         subprojects {
             it.applyModule()
@@ -37,14 +40,14 @@ class InfraPlugin : Plugin<Project> {
 
     private fun Project.applyVersionOverride() {
         if (project.version != rootProject.version) {
-            logger.info("INFRA: Overriding version to ${rootProject.version}")
+            logger.infra("Overriding version to ${rootProject.version}")
             project.version = rootProject.version
         }
     }
 
     private fun Project.applyLocalProperties() {
         val path = "${project.rootDir}/local.properties"
-        logger.info("INFRA: Loading additional properties from $path")
+        logger.infra("Loading additional properties from $path")
         if (Files.exists(Paths.get(path))) {
             val localProperties = FileInputStream(path).use {
                 Properties().apply { load(it) }
@@ -66,11 +69,10 @@ class InfraPlugin : Plugin<Project> {
     }
 
     private fun Project.verifyKotlinVersion() {
-        val kotlinClass =
-            tryGetClass<KotlinBasePluginWrapper>("org.jetbrains.kotlin.gradle.plugin.KotlinBasePluginWrapper")
+        val kotlinClass = tryGetClass<KotlinBasePluginWrapper>("org.jetbrains.kotlin.gradle.plugin.KotlinBasePluginWrapper")
         if (kotlinClass != null) {
             plugins.findPlugin(kotlinClass)?.run {
-                logger.info("INFRA: Detected Kotlin plugin version '$kotlinPluginVersion'")
+                logger.infra("Detected Kotlin plugin version '$kotlinPluginVersion'")
                 if (VersionNumber.parse(kotlinPluginVersion) < VersionNumber.parse(requiredKotlinVersion))
                     throw KotlinInfrastructureException("JetBrains Kotlin Infrastructure plugin requires Kotlin version $requiredKotlinVersion or higher")
             }
