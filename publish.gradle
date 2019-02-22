@@ -1,5 +1,6 @@
 project.ext.bintrayUser = project.hasProperty('bintrayUser') ? project.property('bintrayUser') : null
 project.ext.bintrayApiKey = project.hasProperty('bintrayApiKey') ? project.property('bintrayApiKey') : null
+project.version = project.hasProperty('releaseVersion') ? project.property('releaseVersion') : project.version
 
 publishing {
     repositories {
