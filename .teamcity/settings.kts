@@ -1,5 +1,6 @@
 import jetbrains.buildServer.configs.kotlin.v2018_2.*
 import jetbrains.buildServer.configs.kotlin.v2018_2.buildSteps.*
+import jetbrains.buildServer.configs.kotlin.v2018_2.triggers.*
 
 /*
 The settings script is an entry point for defining a TeamCity
@@ -51,6 +52,15 @@ fun Project.build() = build("Build") {
             tasks = "clean publishToBuildRepository check --continue"
             buildFile = ""
             gradleWrapperPath = ""
+        }
+    }
+
+    triggers {
+        vcs {
+            triggerRules = """
+                    -:*.md
+                    -:.gitignore
+                """.trimIndent()
         }
     }
 
