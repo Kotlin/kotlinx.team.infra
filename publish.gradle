@@ -55,7 +55,7 @@ task publishBintrayCreateVersion() {
         if (apiKey == null)
             throw new Exception("Cannot create version. API key has not been specified. Provide project property with the name 'bintrayApiKey'")
 
-        def encodedAuthorization = java.util.Base64.getEncoder().encodeToString((user + ":" + apiKey).getBytes("UTF‌​-8"));
+        def encodedAuthorization = java.util.Base64.getEncoder().encodeToString((user + ":" + apiKey).getBytes());
 
         logger.lifecycle("Creating version ${project.version} for package ${bintrayPackage} in ${bintrayOrg}/${bintrayRepository} on bintray…")
         logger.info("User: $user")
