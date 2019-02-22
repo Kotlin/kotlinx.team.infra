@@ -13,7 +13,7 @@ publishing {
             def bintrayOrg = project.bintrayOrg
             def bintrayRepository = project.bintrayRepository
             def bintrayPackage = project.bintrayPackage
-            url = "https://api.bintray.com/maven/$bintrayOrg/$bintrayRepository/$bintrayPackage/;publish=0"
+            url = "https://api.bintray.com/maven/$bintrayOrg/$bintrayRepository/$bintrayPackage/;publish=1"
             credentials {
                 username = project.ext.bintrayUser
                 password = project.ext.bintrayApiKey
