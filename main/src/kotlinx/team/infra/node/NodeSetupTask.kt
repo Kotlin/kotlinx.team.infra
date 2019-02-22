@@ -18,10 +18,7 @@ internal open class NodeSetupTask : DefaultTask() {
     val input: Set<String>
         @Input
         get() {
-            return setOf(
-                config.download.toString(),
-                variant.dependency.toString()
-            )
+            return setOf(config.download.toString(), variant.dependency)
         }
 
     val destination: File
@@ -30,7 +27,7 @@ internal open class NodeSetupTask : DefaultTask() {
     
     @TaskAction
     fun exec() {
-        project.repositories.ivy { repo ->
+        val repo = project.repositories.ivy { repo ->
             repo.name = "Node Distributions at ${config.distBaseUrl}"
             repo.url = URI(config.distBaseUrl)
             repo.patternLayout { layout ->
@@ -45,8 +42,10 @@ internal open class NodeSetupTask : DefaultTask() {
         val conf = this.project.configurations.detachedConfiguration(dep)
         conf.isTransitive = false
         val result = conf.resolve().single()
+        project.repositories.remove(repo)
+        
         project.logger.infra("Using node distribution from '$result'")
-
+        
         unpackNodeArchive(result, destination.parentFile) // parent because archive contains name already
         
         if (!variant.windows) {

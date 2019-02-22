@@ -2,6 +2,7 @@ package kotlinx.team.infra.node
 
 import kotlinx.team.infra.*
 import org.gradle.api.*
+import org.gradle.api.tasks.*
 
 internal open class NodePlugin : Plugin<Project> {
 
@@ -12,13 +13,19 @@ internal open class NodePlugin : Plugin<Project> {
     }
 
     override fun apply(project: Project): Unit = project.run {
-        NodeExtension.create(this)
+        val ext = NodeExtension.create(this)
 
         registerGlobal<NodeTask>()
         registerGlobal<NpmTask>()
         registerGlobal<NpmInstallTask>()
 
         tasks.create(NodeSetupTask.NAME, NodeSetupTask::class.java)
+
+        logger.infra("Register ${ext.node_modules} for clean")
+        tasks.maybeCreate("clean", Delete::class.java).apply {
+            delete(ext.node_modules)
+            delete(ext.nodeModulesContainer.resolve("package-lock.json"))
+        }
     }
 
 /*

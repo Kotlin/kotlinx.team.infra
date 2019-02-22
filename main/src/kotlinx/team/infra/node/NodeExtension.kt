@@ -10,19 +10,16 @@ internal open class NodeExtension(project: Project) {
     }
 
     var installationDir = cacheDir.resolve("nodejs")
-    var npmWorkDir = cacheDir.resolve("npm")
-    var yarnWorkDir = cacheDir.resolve("yarn")
 
     var nodeModulesContainer = project.buildDir
+    val node_modules get() = nodeModulesContainer.resolve("node_modules")
 
-    var version = "6.9.1"
     var distBaseUrl = "https://nodejs.org/dist"
-
+    var version = "6.9.1"
     var npmVersion = ""
-    var npmCommand = "npm"
 
-    var yarnVersion = ""
-    var yarnCommand = "yarn"
+    var nodeCommand = "node"
+    var npmCommand = "npm"
 
     var download = false
 
@@ -47,7 +44,7 @@ internal open class NodeExtension(project: Project) {
         return Variant(
             nodeDir = nodeDir,
             nodeBinDir = nodeBinDir,
-            nodeExec = executable("node", npmCommand, "exe").downloaded(nodeBinDir),
+            nodeExec = executable("node", nodeCommand, "exe").downloaded(nodeBinDir),
             npmExec = executable("npm", npmCommand, "cmd").downloaded(nodeBinDir),
             windows = isWindows,
             dependency = dependency(platform, architecture, if (isWindows) "zip" else "tar.gz")

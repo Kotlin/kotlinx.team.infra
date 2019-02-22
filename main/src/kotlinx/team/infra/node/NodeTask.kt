@@ -17,10 +17,18 @@ open class NodeTask : DefaultTask() {
     var execResult: ExecResult? = null
         private set
 
-    var script: File? = null
+    var script: String? = null
     var arguments = mutableListOf<String>()
     var options = mutableListOf<String>()
 
+    fun arguments(vararg values: String) {
+        arguments.addAll(values)
+    }
+
+    fun options(vararg values: String) {
+        options.addAll(values)
+    }
+    
     init {
         group = NodeExtension.Node
         description = "Executes Node script."
@@ -30,20 +38,38 @@ open class NodeTask : DefaultTask() {
     @Inject
     protected open fun getExecActionFactory(): ExecActionFactory = throw UnsupportedOperationException()
 
+    private var advancedConfigure: ((ExecAction) -> Unit)? = null
+
     fun advanced(configure: (ExecAction) -> Unit) {
-        execAction.apply(configure)
+        advancedConfigure = configure
     }
 
     @TaskAction
     fun exec() {
         val script = script ?: throw KotlinInfrastructureException("Cannot run Node task without specified 'script'")
         execAction.apply {
-            workingDir = config.nodeModulesContainer
+            workingDir = project.buildDir
+            val nodeModulesList = mutableListOf<String>()
+            var prj: Project? = project
+            while (prj != null) {
+                val folder = prj.buildDir.resolve("node_modules")
+                if (folder.exists()) {
+                    nodeModulesList.add(folder.absolutePath)
+                }
+                prj = prj.parent
+            }
+
+            val nodePath = nodeModulesList.joinToString(if (variant.windows) ";" else ":")
+            logger.infra("Setting NODE_PATH = $nodePath")
+            environment("NODE_PATH", nodePath)
             args(options)
-            args(script.absolutePath)
+            val scriptFile = File(script)
+            args(scriptFile.toString())
             args(arguments)
             executable = variant.nodeExec
         }
+        advancedConfigure?.let { it(execAction) }
+        logger.infra("Executing: ${execAction.commandLine}")
         execResult = execAction.execute()
     }
 
