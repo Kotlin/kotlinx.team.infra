@@ -35,8 +35,12 @@ open class NpmInstallTask : DefaultTask() {
         logger.trace(errorOutput.toString("UTF-8"))
         val result = exec.execute()
 */
-        val output = config.nodeModulesContainer.resolve("package-lock.json").readText()
-        val install = packages.filter { !output.contains(it.replace("@", "-")) }
+        val lockFile = config.nodeModulesContainer.resolve("package-lock.json")
+        val install = if (lockFile.exists()) {
+            val output = lockFile.readText()
+            packages.filter { !output.contains(it.replace("@", "-")) }
+        } else packages
+
 /*
             if (result.exitValue != 0) {
             // install all
@@ -48,9 +52,8 @@ open class NpmInstallTask : DefaultTask() {
         }
 */
 
-        if (install.isEmpty()) {
+        if (install.isEmpty()) 
             return
-        }
 
         logger.infra("Installing node packages: $packages")
         getExecActionFactory().newExecAction().apply {
