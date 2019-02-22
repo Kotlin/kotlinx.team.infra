@@ -42,13 +42,16 @@ open class BintrayConfiguration {
 }
 
 fun Project.configurePublishing(publishing: PublishingConfiguration) {
-    // Apply maven-publish to all included subprojects
+    val buildLocal = "buildLocal"
+    val compositeBuildLocal = "publishTo${buildLocal.capitalize()}"
+    val rootBuildLocal = rootProject.tasks.maybeCreate(compositeBuildLocal)
+
+    // Apply maven-publish to all included projects
     val includeProjects = publishing.includeProjects.map { project(it) }
-    subprojects { subproject ->
-        if (subproject in includeProjects) {
-            subproject.applyMavenPublish()
-            subproject.createBuildRepository("buildLocal")
-        }
+    logger.infra("Configuring projects for publishing: $includeProjects")
+    includeProjects.forEach { subproject ->
+        subproject.applyMavenPublish()
+        subproject.createBuildRepository(buildLocal, rootBuildLocal)
     }
 
     // If bintray is configured, create version task and configure subprojects
@@ -56,11 +59,21 @@ fun Project.configurePublishing(publishing: PublishingConfiguration) {
     val enableBintray = verifyBintrayConfiguration(bintray)
     if (enableBintray) {
         createBintrayVersionTask(bintray)
-        subprojects { subproject ->
-            if (subproject in includeProjects) {
-                subproject.createBintrayRepository(bintray)
-            }
+        includeProjects.forEach { subproject ->
+            subproject.createBintrayRepository(bintray)
         }
+    }
+
+    gradle.includedBuilds.forEach { includedBuild ->
+        logger.infra("Included build: ${includedBuild.name} from ${includedBuild.projectDir}")
+        val includedPublishTask = includedBuild.task(":$compositeBuildLocal")
+        val includedName = includedBuild.name.split(".").joinToString(separator = "") { it.capitalize() }
+        val copyIncluded = task<Copy>("copy${includedName}BuildLocal") {
+            from(includedBuild.projectDir.resolve("build/maven"))
+            into(buildDir.resolve("maven"))
+            dependsOn(includedPublishTask)
+        }
+        rootBuildLocal.dependsOn(copyIncluded)
     }
 }
 
@@ -69,15 +82,18 @@ private fun Project.applyMavenPublish() {
     pluginManager.apply(MavenPublishPlugin::class.java)
 }
 
-private fun Project.createBuildRepository(name: String) {
+private fun Project.createBuildRepository(name: String, rootBuildLocal: Task) {
     val dir = rootProject.buildDir.resolve("maven")
 
     logger.infra("Enabling publishing to $name in $this")
-    val compositeTask = task<DefaultTask>("publishTo${name.capitalize()}") {
+    val compositeTask = tasks.maybeCreate("publishTo${name.capitalize()}").apply {
         group = PublishingPlugin.PUBLISH_TASK_GROUP
         description = "Publishes all Maven publications produced by this project to Maven repository '$name'"
     }
 
+    if (rootBuildLocal !== compositeTask)
+        rootBuildLocal.dependsOn(compositeTask)
+    
     extensions.configure(PublishingExtension::class.java) { publishing ->
         val repo = publishing.repositories.maven { repo ->
             repo.name = name
@@ -91,7 +107,7 @@ private fun Project.createBuildRepository(name: String) {
 
             tasks.withType(PublishToMavenRepository::class.java) { task ->
                 if (task.repository == repo) {
-                    compositeTask.get().dependsOn(task)
+                    compositeTask.dependsOn(task)
                 }
             }
         }
