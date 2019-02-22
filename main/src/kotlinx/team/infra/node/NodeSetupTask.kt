@@ -27,6 +27,9 @@ internal open class NodeSetupTask : DefaultTask() {
     
     @TaskAction
     fun exec() {
+        if (!config.download) 
+            return
+        
         val repo = project.repositories.ivy { repo ->
             repo.name = "Node Distributions at ${config.distBaseUrl}"
             repo.url = URI(config.distBaseUrl)

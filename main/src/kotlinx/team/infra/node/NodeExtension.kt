@@ -21,7 +21,7 @@ internal open class NodeExtension(project: Project) {
     var nodeCommand = "node"
     var npmCommand = "npm"
 
-    var download = false
+    var download = true
 
     fun buildVariant(): Variant {
         val platform = Platform.name
