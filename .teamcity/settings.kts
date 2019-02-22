@@ -35,12 +35,10 @@ project {
     }
 
     val build = build() 
-    val deployConfigure = deployConfigure()
-    val deploy = deploy(deployConfigure) 
+    val deploy = deploy() 
 
-    buildTypesOrder = listOf(build, deploy, deployConfigure)
+    buildTypesOrder = listOf(build, deploy)
 }
-
 
 fun Project.build() = build("Build") {
     steps {
@@ -68,44 +66,13 @@ fun Project.build() = build("Build") {
     artifactRules = "+:build/maven=>maven"
 }
 
-fun Project.deployConfigure() = BuildType {
-    id("Deploy_Configure")
-    this.name = "Deploy (Configure)"
-    commonConfigure()
-    buildNumberPattern = "$publishVersion-dev-%build.counter%"
-
-    params {
-        // enable editing of this configuration to set up things
-        param("teamcity.ui.settings.readOnly", "false")
-        param("bintray-user", "orangy")
-        password("bintray-key", "credentialsJSON:9a48193c-d16d-46c7-8751-2fb434b09e07")
-        param(versionParameter, "%build.number%")
-    }
-
-    requirements {
-        // Require Linux for configuration build
-        contains("teamcity.agent.jvm.os.name", "Linux")
-    }
-
-    steps {
-        gradle {
-            name = "Verify Gradle Configuration"
-            tasks = "clean publishBintrayCreateVersion"
-            gradleParams = "-P$versionParameter=%$versionParameter% -PbintrayApiKey=%bintray-key% -PbintrayUser=%bintray-user%"
-            buildFile = ""
-            jdkHome = "%env.JDK_18%"
-        }
-    }
-}.also { buildType(it) }
-
-
-fun Project.deploy(configureBuild: BuildType) = build("Deploy") {
+fun Project.deploy() = build("Deploy") {
     type = BuildTypeSettings.Type.DEPLOYMENT
     enablePersonalBuilds = false
     maxRunningBuilds = 1
-    buildNumberPattern = "%releaseVersion% (%build.counter%)"
+    buildNumberPattern = "$publishVersion-dev-%build.counter%"
     params {
-        param(versionParameter, "${configureBuild.depParamRefs.buildNumber}")
+        param(versionParameter, "%build.number%")
         param("bintray-user", "orangy")
         password("bintray-key", "credentialsJSON:9a48193c-d16d-46c7-8751-2fb434b09e07")
     }
@@ -120,12 +87,12 @@ fun Project.deploy(configureBuild: BuildType) = build("Deploy") {
             jdkHome = "%env.JDK_18_x64%"
             jvmArgs = "-Xmx1g"
             gradleParams = "-P$versionParameter=%$versionParameter% -PbintrayApiKey=%bintray-key% -PbintrayUser=%bintray-user%"
-            tasks = "clean build publish"
+            tasks = "clean build publishBintrayCreateVersion publish"
             buildFile = ""
             gradleWrapperPath = ""
         }
     }
-}.dependsOnSnapshot(configureBuild)
+}
 
 fun Project.build(name: String, configure: BuildType.() -> Unit) = BuildType {
     // ID is prepended with Project ID, so don't repeat it here
