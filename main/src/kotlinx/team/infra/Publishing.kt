@@ -128,7 +128,11 @@ private fun Project.verifyBintrayConfiguration(bintray: BintrayConfiguration): B
     }
 
     if (password.trim() != password) {
-        logger.warn("INFRA: API key secure token was expanded with spaces.")
+        logger.warn("INFRA: API key secure token was expanded to a value with whitespace around it.")
+    }
+
+    if (password.trim().isEmpty()) {
+        logger.warn("INFRA: API key secure token was expanded to empty string.")
     }
 
     val organization = bintray.organization ?: return missing("organization")
