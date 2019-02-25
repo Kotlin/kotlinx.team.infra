@@ -49,17 +49,7 @@ open class NodeTask : DefaultTask() {
         val script = script ?: throw KotlinInfrastructureException("Cannot run Node task without specified 'script'")
         execAction.apply {
             workingDir = project.buildDir
-            val nodeModulesList = mutableListOf<String>()
-            var prj: Project? = project
-            while (prj != null) {
-                val folder = prj.buildDir.resolve("node_modules")
-                if (folder.exists()) {
-                    nodeModulesList.add(folder.absolutePath)
-                }
-                prj = prj.parent
-            }
-
-            val nodePath = nodeModulesList.joinToString(if (variant.windows) ";" else ":")
+            val nodePath = project.nodePath(variant)
             logger.infra("Setting NODE_PATH = $nodePath")
             environment("NODE_PATH", nodePath)
             args(options)
@@ -78,3 +68,19 @@ open class NodeTask : DefaultTask() {
     }
 }
 
+internal fun Project.nodePath(variant: Variant): String {
+    val nodeModulesList = mutableListOf<String>()
+    
+    nodeModulesList.add(variant.nodeDir.resolve("lib/node_modules").absolutePath)
+    
+    var prj: Project? = this
+    while (prj != null) {
+        val folder = prj.buildDir.resolve("node_modules")
+        if (folder.exists()) {
+            nodeModulesList.add(folder.absolutePath)
+        }
+        prj = prj.parent
+    }
+
+    return nodeModulesList.joinToString(if (variant.windows) ";" else ":")
+}

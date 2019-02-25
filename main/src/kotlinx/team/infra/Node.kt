@@ -119,6 +119,7 @@ private fun Project.applyNodePlugin(node: NodeConfiguration) {
         if (node.packages.isNotEmpty()) {
             val install = task<NpmInstallTask>("nodeInstall") {
                 packages.addAll(node.packages.map { (pkg, version) -> "$pkg@$version" })
+                dependsOn(NodeSetupTask.NAME)
                 inputs.property("packages", node.packages)
             }
             tasks.named("nodePrepare").get().dependsOn(install)
