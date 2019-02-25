@@ -58,6 +58,7 @@ task publishBintrayCreateVersion() {
         def encodedAuthorization = java.util.Base64.getEncoder().encodeToString((user + ":" + apiKey).getBytes());
 
         logger.lifecycle("Creating version ${project.version} for package ${bintrayPackage} in ${bintrayOrg}/${bintrayRepository} on bintray…")
+        logger.info("URL: $url")
         logger.info("User: $user")
         logger.info("Sending: $versionJson")
         def connection = (HttpURLConnection) url.openConnection()

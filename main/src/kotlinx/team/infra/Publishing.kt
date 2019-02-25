@@ -168,7 +168,7 @@ private fun BintrayConfiguration.api(): String {
         ?: throw KotlinInfrastructureException("Cannot create version. Repository has not been specified.")
     val library = library
         ?: throw KotlinInfrastructureException("Cannot create version. Package has not been specified.")
-    return "https://api.bintray.com/maven/$organization/$repository/$library"
+    return "https://api.bintray.com/packages/$organization/$repository/$library"
 }
 
 fun Project.createBintrayVersionTask(bintray: BintrayConfiguration) {
@@ -191,10 +191,11 @@ fun Project.createBintrayVersionTask(bintray: BintrayConfiguration) {
             val date = sdf.format(now)
             val versionJson = """{"name": "${project.version}", "desc": "", "released":"$date"}"""
 
-            val encodedAuthorization =
-                java.util.Base64.getMimeEncoder().encode(("$username:$password").toByteArray())
+            val basicAuthorization = "$username:$password"
+            val encodedAuthorization = Base64.getEncoder().encodeToString(basicAuthorization.toByteArray())
 
             logger.lifecycle("Creating version ${project.version} for package $library in $organization/$repository on bintray…")
+            logger.infra("URL: $url")
             logger.infra("User: $username")
             logger.infra("Sending: $versionJson")
             val connection = (url.openConnection() as HttpURLConnection).apply {
@@ -202,7 +203,7 @@ fun Project.createBintrayVersionTask(bintray: BintrayConfiguration) {
                 requestMethod = "POST"
                 setRequestProperty("Authorization", "Basic $encodedAuthorization");
                 setRequestProperty("Content-Type", "application/json")
-                outputStream.bufferedWriter().write(versionJson)
+                outputStream.bufferedWriter().use { it.write(versionJson) }
             }
 
             val code = connection.responseCode
