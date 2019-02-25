@@ -17,11 +17,12 @@ class InfraPlugin : Plugin<Project> {
         verifyGradleVersion()
         verifyKotlinVersion()
         verifyRootProject()
+        applyReleaseVersion()
 
         applyLocalProperties()
 
         val extension = installExtension()
-        
+
         extension.afterPublishing {
             configurePublishing(it)
         }
@@ -38,9 +39,15 @@ class InfraPlugin : Plugin<Project> {
         applyVersionOverride()
     }
 
+    private fun Project.applyReleaseVersion() {
+        val version = project.findProperty("releaseVersion") ?: return
+        logger.infra("Overriding root project version to $version")
+        project.version = version
+    }
+
     private fun Project.applyVersionOverride() {
         if (project.version != rootProject.version) {
-            logger.infra("Overriding version to ${rootProject.version}")
+            logger.infra("Overriding subproject version to ${rootProject.version}")
             project.version = rootProject.version
         }
     }
@@ -69,7 +76,8 @@ class InfraPlugin : Plugin<Project> {
     }
 
     private fun Project.verifyKotlinVersion() {
-        val kotlinClass = tryGetClass<KotlinBasePluginWrapper>("org.jetbrains.kotlin.gradle.plugin.KotlinBasePluginWrapper")
+        val kotlinClass =
+            tryGetClass<KotlinBasePluginWrapper>("org.jetbrains.kotlin.gradle.plugin.KotlinBasePluginWrapper")
         if (kotlinClass != null) {
             plugins.findPlugin(kotlinClass)?.run {
                 logger.infra("Detected Kotlin plugin version '$kotlinPluginVersion'")
