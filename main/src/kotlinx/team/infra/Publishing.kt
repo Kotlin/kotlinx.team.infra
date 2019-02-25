@@ -152,7 +152,7 @@ fun Project.createBintrayRepository(bintray: BintrayConfiguration) {
     extensions.configure(PublishingExtension::class.java) { publishing ->
         publishing.repositories.maven { repo ->
             repo.name = "bintray"
-            repo.url = URI("${bintray.api()}/;publish=$publish")
+            repo.url = URI("${bintray.api("maven")}/;publish=$publish")
             repo.credentials { credentials ->
                 credentials.username = username
                 credentials.password = password.trim()
@@ -161,14 +161,14 @@ fun Project.createBintrayRepository(bintray: BintrayConfiguration) {
     }
 }
 
-private fun BintrayConfiguration.api(): String {
+private fun BintrayConfiguration.api(section: String): String {
     val organization = organization
         ?: throw KotlinInfrastructureException("Cannot create version. Organization has not been specified.")
     val repository = repository
         ?: throw KotlinInfrastructureException("Cannot create version. Repository has not been specified.")
     val library = library
         ?: throw KotlinInfrastructureException("Cannot create version. Package has not been specified.")
-    return "https://api.bintray.com/packages/$organization/$repository/$library"
+    return "https://api.bintray.com/$section/$organization/$repository/$library"
 }
 
 fun Project.createBintrayVersionTask(bintray: BintrayConfiguration) {
@@ -185,7 +185,7 @@ fun Project.createBintrayVersionTask(bintray: BintrayConfiguration) {
             val library = bintray.library
                 ?: throw KotlinInfrastructureException("Cannot create version. Package has not been specified.")
 
-            val url = URL("${bintray.api()}/versions")
+            val url = URL("${bintray.api("packages")}/versions")
             val now = Date()
             val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").apply { timeZone = TimeZone.getTimeZone("UTC") }
             val date = sdf.format(now)
