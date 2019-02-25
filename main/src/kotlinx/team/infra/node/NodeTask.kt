@@ -70,8 +70,10 @@ open class NodeTask : DefaultTask() {
 
 internal fun Project.nodePath(variant: Variant): String {
     val nodeModulesList = mutableListOf<String>()
-    
-    nodeModulesList.add(variant.nodeDir.resolve("lib/node_modules").absolutePath)
+
+    val installationNodeModules = installationNodeModules(variant)
+
+    nodeModulesList.add(installationNodeModules.absolutePath)
     
     var prj: Project? = this
     while (prj != null) {
@@ -83,4 +85,9 @@ internal fun Project.nodePath(variant: Variant): String {
     }
 
     return nodeModulesList.joinToString(if (variant.windows) ";" else ":")
+}
+
+internal fun installationNodeModules(variant: Variant): File = when {
+    variant.windows -> variant.nodeDir.resolve("node_modules")
+    else -> variant.nodeDir.resolve("lib/node_modules")
 }

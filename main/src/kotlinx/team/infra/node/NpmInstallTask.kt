@@ -56,13 +56,14 @@ open class NpmInstallTask : DefaultTask() {
             return
 
         logger.infra("Installing node packages: $packages")
+        val installationNodeModules = installationNodeModules(variant)
         val nodePath = project.nodePath(variant)
         logger.infra("Using NODE_PATH = $nodePath")
         val execAction = getExecActionFactory().newExecAction().apply {
             workingDir = config.nodeModulesContainer
             environment("NODE_PATH", nodePath)
             executable = variant.nodeExec
-            args(variant.nodeDir.resolve("lib/node_modules").resolve("npm/bin/npm-cli.js").absolutePath)
+            args(installationNodeModules.resolve("npm/bin/npm-cli.js").absolutePath)
             args("install")
             args(packages)
         }
