@@ -93,7 +93,7 @@ private fun Project.createBuildRepository(name: String, rootBuildLocal: Task) {
 
     if (rootBuildLocal !== compositeTask)
         rootBuildLocal.dependsOn(compositeTask)
-    
+
     extensions.configure(PublishingExtension::class.java) { publishing ->
         val repo = publishing.repositories.maven { repo ->
             repo.name = name
@@ -116,12 +116,20 @@ private fun Project.createBuildRepository(name: String, rootBuildLocal: Task) {
 
 private fun Project.verifyBintrayConfiguration(bintray: BintrayConfiguration): Boolean {
     fun missing(what: String): Boolean {
-        logger.warn("Bintray configuration is missing '$what', publishing will not be possible")
+        logger.warn("INFRA: Bintray configuration is missing '$what', publishing will not be possible")
         return false
     }
 
     bintray.username ?: return missing("username")
-    bintray.password ?: return missing("password")
+    val password = bintray.password ?: return missing("password")
+    if (password.startsWith("credentialsJSON")) {
+        logger.warn("INFRA: API key secure token was not expanded, publishing is not possible")
+        return false
+    }
+
+    if (password.trim() != password) {
+        logger.warn("INFRA: API key secure token was expanded with spaces.")
+    }
 
     val organization = bintray.organization ?: return missing("organization")
     val repository = bintray.repository ?: return missing("repository")
@@ -143,7 +151,7 @@ fun Project.createBintrayRepository(bintray: BintrayConfiguration) {
             repo.url = URI("${bintray.api()}/;publish=$publish")
             repo.credentials { credentials ->
                 credentials.username = username
-                credentials.password = password
+                credentials.password = password.trim()
             }
         }
     }
