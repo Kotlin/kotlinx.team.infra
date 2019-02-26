@@ -23,11 +23,17 @@ class InfraPlugin : Plugin<Project> {
 
         val extension = installExtension()
 
+        // it only creates a task, so no problem with unpopulated extension
+        configureTeamCity(extension.teamcity) 
+
         extension.afterPublishing {
             configurePublishing(it)
         }
         extension.afterNode {
             configureNode(it)
+        }
+        extension.afterNative {
+            configureNativeMultiplatform(it)
         }
 
         subprojects {
