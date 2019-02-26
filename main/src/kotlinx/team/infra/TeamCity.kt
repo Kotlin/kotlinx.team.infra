@@ -14,7 +14,9 @@ fun Project.configureTeamCity(teamcity: TeamCityConfiguration) {
             val teamcityDir = projectDir.resolve(".teamcity")
             logger.infra("Setting up TeamCity configuration at $teamcityDir")
             teamcityDir.mkdir()
-            copyResource(teamcityDir, "pom.xml")
+            copyResource(teamcityDir, "pom.xml") {
+                it.replace("<artifactId>resource</artifactId>", "<artifactId>teamcity</artifactId>")
+            }
             copyResource(teamcityDir, "settings.kts") {
                 it.replace("<<NAME>>", teamcity.projectName ?: project.name.removeSuffix("-package"))
             }

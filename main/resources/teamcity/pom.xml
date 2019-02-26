@@ -2,7 +2,7 @@
 <project>
   <modelVersion>4.0.0</modelVersion>
   <name>TeamCity Config DSL Script</name>
-  <groupId>teamcity</groupId>
+  <groupId>kotlinx.team.infra</groupId>
   <artifactId>resource</artifactId>
   <version>1.0-SNAPSHOT</version>
 
