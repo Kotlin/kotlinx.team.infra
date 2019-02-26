@@ -34,7 +34,8 @@ val platforms = listOf("Windows", "Linux", "Mac OS X")
 
 project {
     // This value is transformed by gradle plugin
-    name = "<<NAME>>"
+    // PROBLEM: Validation error: Project 'name' property cannot be changed in the root of a relative project hierarchy
+    // name = "<<NAME>>"
 
     // Disable editing of project and build settings from the UI to avoid issues with TeamCity
     params {
