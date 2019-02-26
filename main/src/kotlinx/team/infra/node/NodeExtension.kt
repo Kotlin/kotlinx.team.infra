@@ -4,7 +4,7 @@ import kotlinx.team.infra.*
 import org.gradle.api.*
 import java.io.*
 
-internal open class NodeExtension(project: Project) {
+open class NodeExtension(project: Project) {
     private val cacheDir = project.gradle.gradleUserHomeDir.also {
         project.logger.infra("Storing cached files in $it")
     }
@@ -23,7 +23,7 @@ internal open class NodeExtension(project: Project) {
 
     var download = true
 
-    fun buildVariant(): Variant {
+    internal fun buildVariant(): Variant {
         val platform = Platform.name
         val architecture = Platform.architecture
 

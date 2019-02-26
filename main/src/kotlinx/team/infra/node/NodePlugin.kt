@@ -3,8 +3,9 @@ package kotlinx.team.infra.node
 import kotlinx.team.infra.*
 import org.gradle.api.*
 import org.gradle.api.tasks.*
+import org.gradle.language.base.plugins.*
 
-internal open class NodePlugin : Plugin<Project> {
+open class NodePlugin : Plugin<Project> {
 
     private inline fun <reified T> Project.registerGlobal() {
         val clazz = T::class.java
@@ -21,8 +22,12 @@ internal open class NodePlugin : Plugin<Project> {
 
         tasks.create(NodeSetupTask.NAME, NodeSetupTask::class.java)
 
+        // Need to apply LifecycleBasePlugin first to create 'clean' task
+        project.plugins.apply(LifecycleBasePlugin::class.java)
+
         logger.infra("Register ${ext.node_modules} for clean")
-        tasks.maybeCreate("clean", Delete::class.java).apply {
+        val cleanTask = tasks.getByName(LifecycleBasePlugin.CLEAN_TASK_NAME) as Delete
+        cleanTask.apply {
             delete(ext.node_modules)
             delete(ext.nodeModulesContainer.resolve("package-lock.json"))
         }

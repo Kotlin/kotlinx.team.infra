@@ -6,7 +6,7 @@ import org.gradle.api.tasks.*
 import java.io.*
 import java.net.*
 
-internal open class NodeSetupTask : DefaultTask() {
+open class NodeSetupTask : DefaultTask() {
     private val config = NodeExtension[project]
     private val variant by lazy { config.buildVariant() }
 

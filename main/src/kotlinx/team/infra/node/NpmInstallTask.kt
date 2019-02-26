@@ -10,6 +10,11 @@ open class NpmInstallTask : DefaultTask() {
     private val config = NodeExtension[project]
     private val variant by lazy { config.buildVariant() }
 
+    init {
+        group = NodeExtension.Node
+        description = "Install specified node packages"
+    }
+    
     @Input
     var packages = mutableListOf<Any>()
 
