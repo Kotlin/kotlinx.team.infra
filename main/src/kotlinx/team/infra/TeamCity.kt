@@ -30,7 +30,7 @@ fun Project.configureTeamCity(teamcity: TeamCityConfiguration) {
         println("##teamcity[buildNumber '${project.version} ${teamcitySuffix?.let { " ($it)" }}']")
         
         gradle.taskGraph.beforeTask {
-            println("##teamcity[progressMessage 'Gradle: ${it.name}']")
+            println("##teamcity[progressMessage 'Gradle: ${it.project.path}:${it.name}']")
         }
     }
 

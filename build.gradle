@@ -71,6 +71,6 @@ apply from: 'publish.gradle'
 
 if (project.hasProperty("teamcity")) {
     gradle.taskGraph.beforeTask {
-        println("##teamcity[progressMessage 'Gradle: ${it.name}']")
+        println("##teamcity[progressMessage 'Gradle: ${it.project.path}:${it.name}']")
     }
 }
