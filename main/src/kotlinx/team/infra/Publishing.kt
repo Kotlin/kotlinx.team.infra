@@ -44,7 +44,9 @@ open class BintrayConfiguration {
 fun Project.configurePublishing(publishing: PublishingConfiguration) {
     val buildLocal = "buildLocal"
     val compositeBuildLocal = "publishTo${buildLocal.capitalize()}"
-    val rootBuildLocal = rootProject.tasks.maybeCreate(compositeBuildLocal)
+    val rootBuildLocal = rootProject.tasks.maybeCreate(compositeBuildLocal).apply { 
+        group = PublishingPlugin.PUBLISH_TASK_GROUP
+    }
 
     // Apply maven-publish to all included projects
     val includeProjects = publishing.includeProjects.map { project(it) }
@@ -173,6 +175,7 @@ private fun BintrayConfiguration.api(section: String): String {
 
 fun Project.createBintrayVersionTask(bintray: BintrayConfiguration) {
     task<DefaultTask>("publishBintrayCreateVersion") {
+        group = PublishingPlugin.PUBLISH_TASK_GROUP
         doFirst {
             val username = bintray.username
                 ?: throw KotlinInfrastructureException("Cannot create version. User has not been specified.")
