@@ -27,7 +27,7 @@ fun Project.configureTeamCity(teamcity: TeamCityConfiguration) {
         logger.infra("Configured root project version as '${project.version}'")
 
         // Tell teamcity about version number
-        println("##teamcity[buildNumber '${project.version} ${teamcitySuffix?.let { " ($it)" }}']")
+        println("##teamcity[buildNumber '${project.version}${teamcitySuffix?.let { " ($it)" } ?: ""}']")
         
         gradle.taskGraph.beforeTask {
             println("##teamcity[progressMessage 'Gradle: ${it.project.path}:${it.name}']")
