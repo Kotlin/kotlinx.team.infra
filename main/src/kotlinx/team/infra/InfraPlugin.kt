@@ -17,7 +17,6 @@ class InfraPlugin : Plugin<Project> {
         verifyGradleVersion()
         verifyKotlinVersion()
         verifyRootProject()
-        applyReleaseVersion()
 
         applyLocalProperties()
 
@@ -44,13 +43,7 @@ class InfraPlugin : Plugin<Project> {
     private fun Project.applyModule() {
         applyVersionOverride()
     }
-
-    private fun Project.applyReleaseVersion() {
-        val version = project.findProperty("releaseVersion") ?: return
-        logger.infra("Overriding root project version to $version")
-        project.version = version
-    }
-
+    
     private fun Project.applyVersionOverride() {
         if (project.version != rootProject.version) {
             logger.infra("Overriding subproject version to ${rootProject.version}")
