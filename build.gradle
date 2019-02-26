@@ -31,9 +31,13 @@ repositories {
 
 gradlePlugin {
     plugins {
-        kotlinInfraPlugin {
+        teamInfraPlugin {
             id = "kotlinx.team.infra"
             implementationClass = "kotlinx.team.infra.InfraPlugin"
+        }
+        teamNodePlugin {
+            id = "kotlinx.team.node"
+            implementationClass = "kotlinx.team.infra.node.NodePlugin"
         }
     }
 }
