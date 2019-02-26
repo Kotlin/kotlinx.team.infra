@@ -13,7 +13,7 @@ fun Project.configureTeamCity(teamcity: TeamCityConfiguration) {
     if (project.hasProperty("teamcity")) {
         val releaseVersion = project.findProperty("releaseVersion")?.toString()
         val teamcitySuffix = project.findProperty("teamcitySuffix")?.toString()
-        project.version = if (releaseVersion != null && releaseVersion.isNotEmpty()) {
+        project.version = if (releaseVersion != null && releaseVersion != "dev") {
             releaseVersion
         } else {
             // Configure version
