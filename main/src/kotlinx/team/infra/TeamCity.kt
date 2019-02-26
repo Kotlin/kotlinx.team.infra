@@ -12,13 +12,14 @@ class TeamCityConfiguration {
 fun Project.configureTeamCity(teamcity: TeamCityConfiguration) {
     if (project.hasProperty("teamcity")) {
         val releaseVersion = project.findProperty("releaseVersion")?.toString()
+        val teamcitySuffix = project.findProperty("teamcitySuffix")?.toString()
         project.version = if (releaseVersion != null && releaseVersion.isNotEmpty()) {
             releaseVersion
         } else {
             // Configure version
             val versionSuffix = project.findProperty("versionSuffix")?.toString()
             if (versionSuffix != null && versionSuffix.isNotEmpty())
-                "${project.version}-$versionSuffix>']"
+                "${project.version}-$versionSuffix"
             else
                 project.version.toString()
         }
@@ -26,7 +27,7 @@ fun Project.configureTeamCity(teamcity: TeamCityConfiguration) {
         logger.infra("Configured root project version as '${project.version}'")
 
         // Tell teamcity about version number
-        println("##teamcity[buildNumber '${project.version}']")
+        println("##teamcity[buildNumber '${project.version} ${teamcitySuffix?.let { " ($it)" }}']")
         
         gradle.taskGraph.beforeTask {
             println("##teamcity[progressMessage 'Gradle: ${it.name}']")
