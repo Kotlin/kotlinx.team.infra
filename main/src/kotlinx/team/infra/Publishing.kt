@@ -25,8 +25,8 @@ open class PublishingConfiguration {
     }
 
     var includeProjects: MutableList<String> = mutableListOf()
-    fun include(name: String) {
-        includeProjects.add(name)
+    fun include(vararg name: String) {
+        includeProjects.addAll(name)
     }
 }
 
