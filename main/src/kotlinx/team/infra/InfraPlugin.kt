@@ -31,7 +31,7 @@ class InfraPlugin : Plugin<Project> {
         extension.afterNode {
             configureNode(it)
         }
-        extension.afterNative {
+        extension.afterNativeTargets {
             configureNativeMultiplatform(it)
         }
 
