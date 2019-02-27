@@ -28,17 +28,6 @@ open class InfraExtension(val project: Project) {
         nodeHandler?.invoke(node)
     }
     
-    val nativeTargets = NativeConfiguration()
-    private var nativeTargetsHandler: ((NativeConfiguration) -> Unit)? = null
-    internal fun afterNativeTargets(handler: (NativeConfiguration) -> Unit) {
-        nativeTargetsHandler = handler
-    }
-
-    fun nativeTargets(configureClosure: Closure<NativeConfiguration>) {
-        ConfigureUtil.configureSelf(configureClosure, nativeTargets)
-        nativeTargetsHandler?.invoke(nativeTargets)
-    }
-    
     val teamcity = TeamCityConfiguration()
     private var teamcityHandler: ((TeamCityConfiguration) -> Unit)? = null
     internal fun afterTeamCity(handler: (TeamCityConfiguration) -> Unit) {

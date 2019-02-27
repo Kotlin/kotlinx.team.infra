@@ -46,8 +46,8 @@ fun Project.build() = build("Build") {
             name = "Build and Test Binaries"
             jdkHome = "%env.JDK_18_x64%"
             jvmArgs = "-Xmx1g"
-            // --continue is needed to run tests on all platforms even if one platform fails
-            tasks = "clean publishToBuildRepository check --continue"
+            tasks = "clean publishToBuildRepository check"
+            gradleParams = "--info --stacktrace" 
             buildFile = ""
             gradleWrapperPath = ""
         }
@@ -86,8 +86,8 @@ fun Project.deploy() = build("Deploy") {
             name = "Deploy Binaries"
             jdkHome = "%env.JDK_18_x64%"
             jvmArgs = "-Xmx1g"
-            gradleParams = "-P$versionParameter=%$versionParameter% -PbintrayApiKey=%bintray-key% -PbintrayUser=%bintray-user%"
             tasks = "clean build publishBintrayCreateVersion publish"
+            gradleParams = "--info --stacktrace -P$versionParameter=%$versionParameter% -PbintrayApiKey=%bintray-key% -PbintrayUser=%bintray-user%"
             buildFile = ""
             gradleWrapperPath = ""
         }

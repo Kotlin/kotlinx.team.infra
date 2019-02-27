@@ -54,6 +54,6 @@ fun <T> Project.tryGetClass(className: String): Class<T>? {
 }
 
 fun Logger.infra(message: String) {
-    lifecycle("INFRA: $message")
+    info("INFRA: $message")
 }
 
