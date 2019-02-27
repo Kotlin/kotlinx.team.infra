@@ -86,7 +86,7 @@ private fun Project.configureTarget(target: KotlinTarget, node: NodeConfiguratio
         dependsOn(testCompilation.compileKotlinTask)
 
         script = File(config.node_modules, "mocha/bin/mocha").absolutePath
-        arguments(testFile.absolutePath)
+        arguments(testFile.absolutePath, "-a", "no-sandbox")
         if (node.packages.contains("source-map-support"))
             arguments("--require", "source-map-support/register")
         
