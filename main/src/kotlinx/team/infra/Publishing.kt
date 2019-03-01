@@ -47,6 +47,7 @@ fun Project.configurePublishing(publishing: PublishingConfiguration) {
     val rootBuildLocal = rootProject.tasks.maybeCreate(compositeBuildLocal).apply { 
         group = PublishingPlugin.PUBLISH_TASK_GROUP
     }
+    val rootPublish = rootProject.tasks.maybeCreate("publish")
 
     // Apply maven-publish to all included projects
     val includeProjects = publishing.includeProjects.map { project(it) }
@@ -76,6 +77,8 @@ fun Project.configurePublishing(publishing: PublishingConfiguration) {
             dependsOn(includedPublishTask)
         }
         rootBuildLocal.dependsOn(copyIncluded)
+
+        rootPublish.dependsOn(includedBuild.task(":publish"))
     }
 }
 
