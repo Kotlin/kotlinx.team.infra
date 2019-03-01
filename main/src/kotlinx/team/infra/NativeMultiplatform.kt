@@ -12,12 +12,13 @@ private val hostManager = HostManager()
 private val hostTarget = HostManager.host
 
 fun Project.configureNativeMultiplatform() {
-    val multiplatformExtensionClass = tryGetClass<KotlinMultiplatformExtension>("org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension")
+    val multiplatformExtensionClass =
+        tryGetClass<KotlinMultiplatformExtension>("org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension")
     if (multiplatformExtensionClass == null) {
         logger.infra("Skipping native configuration because multiplatform plugin has not been applied")
         return
     }
-    
+
     val ideaActive = System.getProperty("idea.active")?.toBoolean() ?: false
     subprojects { subproject ->
         // Checking for MPP beforeEvaluate is too early, and in afterEvaluate too late because node plugin breaks
@@ -38,10 +39,24 @@ fun Project.configureNativeMultiplatform() {
     }
 }
 
-class NativeIdeaInfraExtension(
-    private val project: Project,
-    private val kotlin: KotlinMultiplatformExtension
+abstract class NativeInfraExtension(
+    protected val project: Project,
+    protected val kotlin: KotlinMultiplatformExtension
 ) {
+    protected val sharedConfigs = mutableListOf<KotlinNativeTarget.() -> Unit>()
+    fun shared(configure: Closure<*>) = shared { ConfigureUtil.configure(configure, this) }
+    fun shared(configure: KotlinNativeTarget.() -> Unit) {
+        sharedConfigs.add(configure)
+    }
+
+    fun target(name: String) = target(name) { }
+    fun target(name: String, configure: Closure<*>) = target(name) { ConfigureUtil.configure(configure, this) }
+    abstract fun target(name: String, configure: KotlinNativeTarget.() -> Unit)
+}
+
+class NativeIdeaInfraExtension(project: Project, kotlin: KotlinMultiplatformExtension) :
+    NativeInfraExtension(project, kotlin) {
+
     private val hostPreset = kotlin.presets.filterIsInstance<KotlinNativeTargetPreset>().single { preset ->
         hostManager.isEnabled(preset.konanTarget) && hostTarget == preset.konanTarget
     }
@@ -51,14 +66,13 @@ class NativeIdeaInfraExtension(
         project.logger.infra("Host preset: ${hostPreset.name}")
     }
 
-    fun target(name: String) = target(name) { }
-    fun target(name: String, configure: Closure<*>) = target(name) { ConfigureUtil.configure(configure, this) }
-    fun target(name: String, configure: KotlinNativeTarget.() -> Unit) {
+    override fun target(name: String, configure: KotlinNativeTarget.() -> Unit) {
         if (name != hostPreset.name)
             return
 
         kotlin.targetFromPreset(hostPreset, "native") {
             configure()
+            sharedConfigs.forEach { it() }
         }
 
         project.afterEvaluate {
@@ -69,10 +83,9 @@ class NativeIdeaInfraExtension(
     }
 }
 
-class NativeBuildInfraExtension(
-    private val project: Project,
-    private val kotlin: KotlinMultiplatformExtension
-) {
+class NativeBuildInfraExtension(project: Project, kotlin: KotlinMultiplatformExtension) :
+    NativeInfraExtension(project, kotlin) {
+
     private val enabledNativePresets = kotlin.presets.filterIsInstance<KotlinNativeTargetPreset>().filter { preset ->
         hostManager.isEnabled(preset.konanTarget)
     }
@@ -85,14 +98,15 @@ class NativeBuildInfraExtension(
         project.logger.infra("Enabled native targets: ${enabledNativePresets.joinToString { it.name }}")
     }
 
-    fun target(name: String) = target(name) { }
-    fun target(name: String, configure: Closure<*>) = target(name) { ConfigureUtil.configure(configure, this) }
-    fun target(name: String, configure: KotlinNativeTarget.() -> Unit) {
+    override fun target(name: String, configure: KotlinNativeTarget.() -> Unit) {
         val preset = enabledNativePresets.singleOrNull { it.name == name } ?: return
         project.logger.infra("Creating target '${preset.name}' with dependency on 'native'")
 
-        val target = kotlin.targetFromPreset(preset) {}
-        target.configure()
+        val target = kotlin.targetFromPreset(preset) {
+            configure()
+            sharedConfigs.forEach { config -> config() }
+        }
+
         kotlin.sourceSets.getByName("${preset.name}Main") { sourceSet ->
             sourceSet.dependsOn(nativeMain)
         }
