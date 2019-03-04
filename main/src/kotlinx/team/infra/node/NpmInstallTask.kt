@@ -18,6 +18,14 @@ open class NpmInstallTask : DefaultTask() {
     @Input
     var packages = mutableListOf<Any>()
 
+    fun install(specification: String) {
+        packages.add(specification)
+    }
+
+    fun install(name: String, version: String) {
+        packages.add("$name@$version")
+    }
+    
     @TaskAction
     fun exec() {
         val packages = packages.map { it.toString() }
