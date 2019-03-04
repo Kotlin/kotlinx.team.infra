@@ -32,7 +32,19 @@ open class NodeTask : DefaultTask() {
     init {
         group = NodeExtension.Node
         description = "Executes Node script."
-        dependsOn(project.rootProject.tasks.named(NodeSetupTask.NAME))
+        
+        dependsOn(getTaskFromHierarchy(NodeSetupTask.NAME))
+    }
+
+    private fun getTaskFromHierarchy(name: String): Task? {
+        var prj : Project? = project
+        while (prj != null) {
+            val task = prj.tasks.findByName(name)
+            if (task != null)
+                return task
+            prj = prj.parent
+        }
+        throw KotlinInfrastructureException("Cannot find task '$name' from hierarchy of $project")
     }
 
     @Inject
