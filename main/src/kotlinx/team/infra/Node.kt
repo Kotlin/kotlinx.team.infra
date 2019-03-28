@@ -1,18 +1,31 @@
 package kotlinx.team.infra
 
+import groovy.lang.*
 import kotlinx.team.infra.node.*
 import org.gradle.api.*
 import org.gradle.api.tasks.*
+import org.gradle.util.*
 import org.jetbrains.kotlin.gradle.dsl.*
 import org.jetbrains.kotlin.gradle.plugin.*
 import org.jetbrains.kotlin.gradle.plugin.mpp.*
 import java.io.*
+
+class MochaConfiguration {
+    lateinit var version: String
+
+    val arguments: MutableList<String> = mutableListOf()
+
+    fun arguments(vararg value: String) {
+        arguments += value
+    }
+}
 
 class NodeConfiguration {
     var version = "10.15.1"
     var npmVersion = "5.7.1"
 
     var packages = mutableMapOf<String, String>()
+    val mochaConfiguration = MochaConfiguration()
 
     fun install(pkg: String, version: String) {
         packages.put(pkg, version)
@@ -20,6 +33,12 @@ class NodeConfiguration {
 
     fun mocha(version: String) {
         install("mocha", version)
+    }
+
+    fun mocha(configureClosure: Closure<MochaConfiguration>) {
+        ConfigureUtil.configureSelf(configureClosure, mochaConfiguration)
+
+        install("mocha", mochaConfiguration.version)
     }
 }
 
@@ -77,28 +96,10 @@ private fun Project.configureTarget(target: KotlinTarget, node: NodeConfiguratio
         from(dependencyFiles)
     }
 
-    val mocha = task<NodeTask>("${targetName}TestMocha") {
-        val testFile = testCompilation.compileKotlinTask.outputFile
-        onlyIf { testFile.exists() }
-        group = "verification"
-        description = "Runs tests with Mocha for 'test' compilation of target '$targetName'"
-        dependsOn(dependenciesTask)
-        dependsOn(testCompilation.compileKotlinTask)
-
-        script = File(config.node_modules, "mocha/bin/mocha").absolutePath
-        arguments(testFile.absolutePath, "-a", "no-sandbox")
-        if (node.packages.contains("source-map-support"))
-            arguments("--require", "source-map-support/register")
-        
-        if (project.hasProperty("teamcity") && node.packages.contains("mocha-teamcity-reporter"))
-            arguments("--reporter", "mocha-teamcity-reporter")
-
-        advanced {
-            it.workingDir = projectDir
-        }
+    if (node.packages.contains("mocha")) {
+        val mocha = createMochaTestTask(node, targetName, testCompilation, dependenciesTask)
+        tasks.getByName("${targetName}Test").dependsOn(mocha)
     }
-
-    tasks.getByName("${targetName}Test").dependsOn(mocha)
 }
 
 private fun Project.applyNodePlugin(node: NodeConfiguration) {
@@ -127,3 +128,32 @@ private fun Project.applyNodePlugin(node: NodeConfiguration) {
     }
 }
 
+private fun Project.createMochaTestTask(
+    node: NodeConfiguration,
+    targetName: String,
+    testCompilation: KotlinJsCompilation,
+    dependenciesTask: TaskProvider<Sync>
+): TaskProvider<NodeTask> = task<NodeTask>("${targetName}TestMocha") {
+    val config = NodeExtension[this@createMochaTestTask]
+    val testFile = testCompilation.compileKotlinTask.outputFile
+    onlyIf { testFile.exists() }
+    group = "verification"
+    description = "Runs tests with Mocha for 'test' compilation of target '$targetName'"
+    dependsOn(dependenciesTask)
+    dependsOn(testCompilation.compileKotlinTask)
+
+    script = File(config.node_modules, "mocha/bin/mocha").absolutePath
+    arguments(testFile.absolutePath, "-a", "no-sandbox")
+
+    if (node.packages.contains("source-map-support"))
+        arguments("--require", "source-map-support/register")
+
+    if (project.hasProperty("teamcity") && node.packages.contains("mocha-teamcity-reporter"))
+        arguments("--reporter", "mocha-teamcity-reporter")
+
+    arguments(*node.mochaConfiguration.arguments.toTypedArray())
+
+    advanced {
+        it.workingDir = projectDir
+    }
+}
