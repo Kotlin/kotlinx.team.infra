@@ -86,20 +86,18 @@ class NativeIdeaInfraExtension(project: Project, kotlin: KotlinMultiplatformExte
 class NativeBuildInfraExtension(project: Project, kotlin: KotlinMultiplatformExtension) :
     NativeInfraExtension(project, kotlin) {
 
-    private val enabledNativePresets = kotlin.presets.filterIsInstance<KotlinNativeTargetPreset>().filter { preset ->
-        hostManager.isEnabled(preset.konanTarget)
-    }
+    private val nativePresets = kotlin.presets.filterIsInstance<KotlinNativeTargetPreset>()
 
     private val nativeMain = kotlin.sourceSets.create("nativeMain")
     private val nativeTest = kotlin.sourceSets.create("nativeTest")
 
     init {
         project.logger.infra("Configuring native targets for $project for build")
-        project.logger.infra("Enabled native targets: ${enabledNativePresets.joinToString { it.name }}")
+        project.logger.infra("Enabled native targets: ${nativePresets.joinToString { it.name }}")
     }
 
     override fun target(name: String, configure: KotlinNativeTarget.() -> Unit) {
-        val preset = enabledNativePresets.singleOrNull { it.name == name } ?: return
+        val preset = nativePresets.singleOrNull { it.name == name } ?: return
         project.logger.infra("Creating target '${preset.name}' with dependency on 'native'")
 
         val target = kotlin.targetFromPreset(preset) {
