@@ -31,18 +31,18 @@ inline fun <reified T : Task> Project.task(
     return task
 }
 
-class KotlinClosure1<in T : Any?, V : Any>(
+class KotlinClosure1<T : Any?, V : Any>(
     val function: T.() -> V?,
     owner: Any? = null,
     thisObject: Any? = null
-) : Closure<V?>(owner, thisObject) {
+) : Closure<T>(owner, thisObject) {
 
     @Suppress("unused") // to be called dynamically by Groovy
     fun doCall(it: T): V? = it.function()
 }
 
-fun <T> Any.closureOf(action: T.() -> Unit): Closure<Any?> =
-    KotlinClosure1(action, this, this)
+fun <T> Any.closureOf(action: T.() -> Unit) : Closure<T> =
+    KotlinClosure1<T, Unit>(action, this, this)
 
 fun <T> Project.tryGetClass(className: String): Class<T>? {
     val classLoader = buildscript.classLoader

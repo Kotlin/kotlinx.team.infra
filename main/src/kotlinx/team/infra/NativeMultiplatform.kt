@@ -23,7 +23,7 @@ fun Project.configureNativeMultiplatform() {
     subprojects { subproject ->
         // Checking for MPP beforeEvaluate is too early, and in afterEvaluate too late because node plugin breaks
         subproject.pluginManager.withPlugin("kotlin-multiplatform") { plugin ->
-            val kotlin = multiplatformExtensionClass?.let { subproject.extensions.findByType(it) }
+            val kotlin = subproject.extensions.findByType(multiplatformExtensionClass) 
             if (kotlin == null) {
                 logger.infra("Skipping native configuration for $subproject because multiplatform plugin has not been configured properly")
                 return@withPlugin
