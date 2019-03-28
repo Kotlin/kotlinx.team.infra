@@ -61,6 +61,7 @@ open class NodeTask : DefaultTask() {
         val script = script ?: throw KotlinInfrastructureException("Cannot run Node task without specified 'script'")
         execAction.apply {
             workingDir = project.buildDir
+            workingDir.mkdirs()
             val nodePath = project.nodePath(variant)
             logger.infra("Setting NODE_PATH = $nodePath")
             environment("NODE_PATH", nodePath)

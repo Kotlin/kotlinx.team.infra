@@ -35,6 +35,7 @@ open class NpmTask : DefaultTask() {
         val command = command ?: throw KotlinInfrastructureException("Cannot run npm task without specified 'command'")
         execAction.apply {
             workingDir = config.nodeModulesContainer
+            workingDir.mkdirs()
             args(options)
             args(command)
             args(arguments)

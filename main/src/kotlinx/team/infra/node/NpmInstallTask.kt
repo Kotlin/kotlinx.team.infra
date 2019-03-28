@@ -74,6 +74,7 @@ open class NpmInstallTask : DefaultTask() {
         logger.infra("Using NODE_PATH = $nodePath")
         val execAction = getExecActionFactory().newExecAction().apply {
             workingDir = config.nodeModulesContainer
+            workingDir.mkdirs()
             environment("NODE_PATH", nodePath)
             executable = variant.nodeExec
             args(installationNodeModules.resolve("npm/bin/npm-cli.js").absolutePath)
