@@ -197,17 +197,18 @@ private fun Project.createTestMochaChromeTask(
         val testFile = testCompilation.compileKotlinTask.outputFile
         val mochaDir = File(config.node_modules, "mocha")
         val dependenciesTask = dependenciesTaskProvider.get()
-        val dependenciesOrder = dependencyFiles(testCompilation).map { it.name }
         val dependenciesFolder = dependenciesTask.outputs.files.singleFile
         val testPage = File(dependenciesFolder, "${targetName}TestMochaChrome.html")
 
         doFirst {
+            val dependenciesOrder = dependencyFiles(testCompilation)
+            val dependenciesIndex = dependenciesOrder.map { it.name }
             val dependencyText = dependenciesTask.outputs.files.asFileTree
                 .filter {
                     it.name.endsWith(".js") && !it.name.endsWith(".meta.js")
                 }
                 .sortedBy { 
-                    val index = dependenciesOrder.indexOf(it.name)
+                    val index = dependenciesIndex.indexOf(it.name)
                     if (index == -1)
                         10000
                     else
