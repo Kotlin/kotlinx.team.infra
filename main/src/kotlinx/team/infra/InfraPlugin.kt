@@ -1,5 +1,6 @@
 package kotlinx.team.infra
 
+import kotlinx.team.infra.api.*
 import org.gradle.api.*
 import org.gradle.util.*
 import org.jetbrains.kotlin.gradle.plugin.*
@@ -30,6 +31,9 @@ class InfraPlugin : Plugin<Project> {
         }
         extension.afterNode {
             configureNode(it)
+        }
+        extension.afterApiCheck {
+            configureApiCheck(it)
         }
         configureNativeMultiplatform()
 
