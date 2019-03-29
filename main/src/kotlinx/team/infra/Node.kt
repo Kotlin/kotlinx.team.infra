@@ -11,6 +11,7 @@ import org.jetbrains.kotlin.gradle.dsl.*
 import org.jetbrains.kotlin.gradle.plugin.*
 import org.jetbrains.kotlin.gradle.plugin.mpp.*
 import java.io.*
+import java.util.concurrent.*
 
 class MochaConfiguration {
     var version: String? = null
@@ -103,7 +104,7 @@ private fun Project.configureTarget(target: KotlinTarget, node: NodeConfiguratio
 private fun Project.dependencyFiles(
     mainCompilation: KotlinJsCompilation,
     testCompilation: KotlinJsCompilation
-): ConfigurableFileCollection {
+): ConfigurableFileCollection = files(Callable {
     val name = testCompilation.runtimeDependencyConfigurationName
 
     val orderedDependencies = mutableSetOf<ResolvedDependency>()
@@ -128,12 +129,12 @@ private fun Project.dependencyFiles(
         }
     }
 
-    return files(
+    return@Callable files(
         moduleDependenciesFiles,
         mainCompilation.output.allOutputs.asFileTree,
         testCompilation.output.allOutputs.asFileTree
     ).builtBy(configuration)
-}
+})
 
 fun collectDependencies(dependency: ResolvedDependency, orderedDependencies: MutableSet<ResolvedDependency>) {
     if (!orderedDependencies.contains(dependency)) {
@@ -241,7 +242,7 @@ private fun Project.createTestMochaChromeTask(
     <script>mocha.timeout(10000000);</script>
     <script>mocha.setup('bdd');</script>
 
-$dependencyText 
+$dependencyText
 
     <script>mocha.run();</script>
     </body>
