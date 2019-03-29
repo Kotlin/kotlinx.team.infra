@@ -85,8 +85,7 @@ private fun Project.configureTarget(target: KotlinTarget, node: NodeConfiguratio
         dependsOn(mainCompilation.compileKotlinTask)
         dependsOn(rootProject.tasks.named("nodePrepare"))
 
-        from(mainCompilation.compileKotlinTask.destinationDir)
-        from(dependencyFiles(testCompilation))
+        from(dependencyFiles(mainCompilation, testCompilation))
         into(project.buildDir.resolve("node_modules"))
     }
 
@@ -96,25 +95,29 @@ private fun Project.configureTarget(target: KotlinTarget, node: NodeConfiguratio
     }
 
     if (node.mochaConfiguration.headlessChromeVersion != null) {
-        val mochaChrome = createTestMochaChromeTask(node, targetName, testCompilation, dependenciesTask)
+        val mochaChrome = createTestMochaChromeTask(node, targetName, mainCompilation, testCompilation, dependenciesTask)
         tasks.getByName("${targetName}Test").dependsOn(mochaChrome)
     }
 }
 
-private fun Project.dependencyFiles(compilation: KotlinJsCompilation): ConfigurableFileCollection {
-    val name = compilation.runtimeDependencyConfigurationName
+private fun Project.dependencyFiles(
+    mainCompilation: KotlinJsCompilation,
+    testCompilation: KotlinJsCompilation
+): ConfigurableFileCollection {
+    val name = testCompilation.runtimeDependencyConfigurationName
 
-    val resolvedDependencies = mutableSetOf<ResolvedDependency>()
+    val orderedDependencies = mutableSetOf<ResolvedDependency>()
 
-    val moduleDependencies = configurations.getByName(name).resolvedConfiguration.firstLevelModuleDependencies
-    
+    val resolvedConfiguration = configurations.getByName(name).resolvedConfiguration
+    val moduleDependencies = resolvedConfiguration.firstLevelModuleDependencies
+
     moduleDependencies.forEach {
-        collectDependencies(it, resolvedDependencies)
+        collectDependencies(it, orderedDependencies)
     }
 
-    val configuration = compilation.runtimeDependencyFiles
+    val configuration = testCompilation.runtimeDependencyFiles
 
-    val dependencies = resolvedDependencies.flatMap { it.allModuleArtifacts }.map { it.file }.map {
+    val moduleDependenciesFiles = orderedDependencies.flatMap { it.allModuleArtifacts }.map { it.file }.map {
         if (it.name.endsWith(".jar")) {
             zipTree(it.absolutePath).matching {
                 it.include("*.js")
@@ -124,16 +127,20 @@ private fun Project.dependencyFiles(compilation: KotlinJsCompilation): Configura
             files(it)
         }
     }
-    
-    return files(dependencies, compilation.output.allOutputs.files).builtBy(configuration)
+
+    return files(
+        moduleDependenciesFiles,
+        mainCompilation.output.allOutputs.asFileTree,
+        testCompilation.output.allOutputs.asFileTree
+    ).builtBy(configuration)
 }
 
-fun collectDependencies(dependency: ResolvedDependency, resolvedDependencies: MutableSet<ResolvedDependency>) {
-    if (!resolvedDependencies.contains(dependency)) {
+fun collectDependencies(dependency: ResolvedDependency, orderedDependencies: MutableSet<ResolvedDependency>) {
+    if (!orderedDependencies.contains(dependency)) {
         dependency.children.forEach {
-            collectDependencies(it, resolvedDependencies)
+            collectDependencies(it, orderedDependencies)
         }
-        resolvedDependencies.add(dependency)
+        orderedDependencies.add(dependency)
     }
 }
 
@@ -188,6 +195,7 @@ private fun Project.createTestMochaNodeTask(
 private fun Project.createTestMochaChromeTask(
     node: NodeConfiguration,
     targetName: String,
+    mainCompilation: KotlinJsCompilation,
     testCompilation: KotlinJsCompilation,
     dependenciesTaskProvider: TaskProvider<Sync>
 ): TaskProvider<NodeTask> {
@@ -201,13 +209,13 @@ private fun Project.createTestMochaChromeTask(
         val testPage = File(dependenciesFolder, "${targetName}TestMochaChrome.html")
 
         doFirst {
-            val dependenciesOrder = dependencyFiles(testCompilation)
+            val dependenciesOrder = dependencyFiles(mainCompilation, testCompilation)
             val dependenciesIndex = dependenciesOrder.map { it.name }
             val dependencyText = dependenciesTask.outputs.files.asFileTree
                 .filter {
                     it.name.endsWith(".js") && !it.name.endsWith(".meta.js")
                 }
-                .sortedBy { 
+                .sortedBy {
                     val index = dependenciesIndex.indexOf(it.name)
                     if (index == -1)
                         10000
