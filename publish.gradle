@@ -2,6 +2,11 @@ project.ext.bintrayUser = project.hasProperty('bintrayUser') ? project.property(
 project.ext.bintrayApiKey = project.hasProperty('bintrayApiKey') ? project.property('bintrayApiKey') : null
 project.version = project.hasProperty('releaseVersion') ? project.property('releaseVersion') : project.version
 
+task sourceJar(type: Jar) {
+    classifier 'sources'
+    from sourceSets.main.allJava
+}
+
 publishing {
     repositories {
         maven {
@@ -19,6 +24,10 @@ publishing {
                 password = project.ext.bintrayApiKey
             }
         }
+    }
+
+    publications.all {
+        it.artifact tasks.sourceJar
     }
 }
 
