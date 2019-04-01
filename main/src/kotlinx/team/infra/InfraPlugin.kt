@@ -23,8 +23,11 @@ class InfraPlugin : Plugin<Project> {
 
         val extension = installExtension()
 
+        configureProjectVersion()
+        
         // it only creates a task, so no problem with unpopulated extension
-        configureTeamCity(extension.teamcity) 
+        configureTeamCityLogging()
+        configureTeamCityConfigGenerator(extension.teamcity)
 
         extension.afterPublishing {
             configurePublishing(it)

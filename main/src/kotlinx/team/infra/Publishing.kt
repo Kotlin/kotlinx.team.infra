@@ -2,6 +2,7 @@ package kotlinx.team.infra
 
 import groovy.lang.*
 import org.gradle.api.*
+import org.gradle.api.plugins.*
 import org.gradle.api.publish.*
 import org.gradle.api.publish.maven.plugins.*
 import org.gradle.api.publish.maven.tasks.*
@@ -16,12 +17,12 @@ open class PublishingConfiguration {
     val bintray = BintrayConfiguration()
     fun bintray(configureClosure: Closure<BintrayConfiguration>) {
         ConfigureUtil.configureSelf(configureClosure, bintray)
-        bintrayHandler?.invoke(bintray)
     }
 
-    private var bintrayHandler: ((BintrayConfiguration) -> Unit)? = null
-    internal fun afterBintray(handler: (BintrayConfiguration) -> Unit) {
-        bintrayHandler = handler
+    var bintrayDev: BintrayConfiguration? = null
+    fun bintrayDev(configureClosure: Closure<BintrayConfiguration>) {
+        if (bintrayDev == null) bintrayDev = BintrayConfiguration()
+        ConfigureUtil.configureSelf(configureClosure, bintrayDev)
     }
 
     var includeProjects: MutableList<String> = mutableListOf()
@@ -41,10 +42,32 @@ open class BintrayConfiguration {
     var publish: Boolean = false
 }
 
+fun Project.configureProjectVersion() {
+    val ext = extensions.getByType(ExtraPropertiesExtension::class.java)
+
+    val releaseVersion = project.findProperty("releaseVersion")?.toString()
+    project.version = if (releaseVersion != null && releaseVersion != "dev") {
+        ext.set("infra.release", true)
+        releaseVersion
+    } else {
+        ext.set("infra.release", false)
+        // Configure version
+        val versionSuffix = project.findProperty("versionSuffix")?.toString()
+        if (versionSuffix != null && versionSuffix.isNotEmpty())
+            "${project.version}-$versionSuffix"
+        else
+            project.version.toString()
+    }
+
+    logger.infra("Configured root project version as '${project.version}'")
+}
+
 fun Project.configurePublishing(publishing: PublishingConfiguration) {
+    val ext = extensions.getByType(ExtraPropertiesExtension::class.java)
+    
     val buildLocal = "buildLocal"
     val compositeBuildLocal = "publishTo${buildLocal.capitalize()}"
-    val rootBuildLocal = rootProject.tasks.maybeCreate(compositeBuildLocal).apply { 
+    val rootBuildLocal = rootProject.tasks.maybeCreate(compositeBuildLocal).apply {
         group = PublishingPlugin.PUBLISH_TASK_GROUP
     }
     val rootPublish = rootProject.tasks.maybeCreate("publish")
@@ -58,7 +81,11 @@ fun Project.configurePublishing(publishing: PublishingConfiguration) {
     }
 
     // If bintray is configured, create version task and configure subprojects
-    val bintray = publishing.bintray
+    val bintray = if (ext.get("infra.release") == true)
+        publishing.bintray
+    else 
+        publishing.bintrayDev ?: publishing.bintray
+    
     val enableBintray = verifyBintrayConfiguration(bintray)
     if (enableBintray) {
         createBintrayVersionTask(bintray)

@@ -1,39 +1,30 @@
 package kotlinx.team.infra
 
 import org.gradle.api.*
+import org.gradle.api.plugins.*
 import java.io.*
 
 class TeamCityConfiguration {
     var projectName: String? = null
     var bintrayUser: String? = null
     var bintrayToken: String? = null
+
+    var jdk = "JDK_18_x64"
 }
 
-fun Project.configureTeamCity(teamcity: TeamCityConfiguration) {
+fun Project.configureTeamCityLogging() {
+    val teamcitySuffix = project.findProperty("teamcitySuffix")?.toString()
     if (project.hasProperty("teamcity")) {
-        val releaseVersion = project.findProperty("releaseVersion")?.toString()
-        val teamcitySuffix = project.findProperty("teamcitySuffix")?.toString()
-        project.version = if (releaseVersion != null && releaseVersion != "dev") {
-            releaseVersion
-        } else {
-            // Configure version
-            val versionSuffix = project.findProperty("versionSuffix")?.toString()
-            if (versionSuffix != null && versionSuffix.isNotEmpty())
-                "${project.version}-$versionSuffix"
-            else
-                project.version.toString()
-        }
-
-        logger.infra("Configured root project version as '${project.version}'")
-
         // Tell teamcity about version number
         println("##teamcity[buildNumber '${project.version}${teamcitySuffix?.let { " ($it)" } ?: ""}']")
-        
+
         gradle.taskGraph.beforeTask {
             println("##teamcity[progressMessage 'Gradle: ${it.project.path}:${it.name}']")
         }
     }
+}
 
+fun Project.configureTeamCityConfigGenerator(teamcity: TeamCityConfiguration) {
     val project = this
     task<DefaultTask>("setupTeamCity") {
         doLast {
@@ -44,18 +35,19 @@ fun Project.configureTeamCity(teamcity: TeamCityConfiguration) {
                 it
                     .replace("<artifactId>resource</artifactId>", "<artifactId>teamcity</artifactId>")
             }
-            copyResource(teamcityDir, "settings.kts") {
+            copyResource(teamcityDir, "settings.kts") { text ->
                 val projectName = teamcity.projectName ?: project.name.removeSuffix("-package")
                 val projectVersion = project.version.toString()
                 val bintrayUser = teamcity.bintrayUser
                     ?: throw KotlinInfrastructureException("TeamCity configuration should specify `bintrayUser` parameter")
                 val bintrayToken = teamcity.bintrayToken
                     ?: throw KotlinInfrastructureException("TeamCity configuration should specify `bintrayToken` parameter")
-                it
+                text
                     .replace("<<PROJECT_VERSION>>", projectVersion)
                     .replace("<<PROJECT_NAME>>", projectName)
                     .replace("<<BINTRAY_USER>>", bintrayUser)
                     .replace("<<BINTRAY_TOKEN>>", bintrayToken)
+                    .replace("<<JDK>>", teamcity.jdk)
             }
         }
     }
