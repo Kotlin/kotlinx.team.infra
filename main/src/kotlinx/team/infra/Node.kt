@@ -104,7 +104,7 @@ private fun Project.dependencyFiles(mainCompilation: KotlinJsCompilation, testCo
     collectDependenciesInOrder(testCompilation),
     mainCompilation.output.allOutputs.asFileTree,
     testCompilation.output.allOutputs.asFileTree
-).builtBy(mainCompilation, testCompilation)
+).builtBy(mainCompilation.runtimeDependencyFiles, testCompilation.runtimeDependencyFiles)
 
 private fun Project.collectDependenciesInOrder(testCompilation: KotlinJsCompilation) = files(
     Callable {
