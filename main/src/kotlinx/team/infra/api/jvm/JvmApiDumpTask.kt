@@ -8,7 +8,7 @@ import org.jetbrains.kotlin.gradle.dsl.*
 import org.jetbrains.kotlin.gradle.plugin.*
 import java.io.*
 
-open class JvmApiCheckTask : DefaultTask() {
+open class JvmApiDumpTask : DefaultTask() {
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
     lateinit var inputClassesDirs: FileCollection
@@ -33,9 +33,6 @@ open class JvmApiCheckTask : DefaultTask() {
         outputApiDir.resolve("${project.name}.api").bufferedWriter().use { writer ->
             signatures
                 .sortedBy { it.name }
-                .onEach { 
-                    println("SIGNATURE: ${it.signature}")
-                }
                 .forEach { api ->
                     writer.append(api.signature).appendln(" {")
                     api.memberSignatures
@@ -51,10 +48,10 @@ fun Project.createJvmApiCheckTask(
     target: KotlinTarget,
     mainCompilation: KotlinCompilation<KotlinCommonOptions>,
     apiBuildDir: File
-): TaskProvider<JvmApiCheckTask> {
-    return task<JvmApiCheckTask>("${target.name}CheckApi") {
-        group = "verification"
-        description = "Runs JVM API checks for 'main' compilation of target '${target.name}'"
+): TaskProvider<JvmApiDumpTask> {
+    return task<JvmApiDumpTask>("${target.name}DumpApi") {
+        group = "other"
+        description = "Dumps JVM API for 'main' compilation of target '${target.name}'"
 
         inputClassesDirs = mainCompilation.output.allOutputs
         inputDependencies = mainCompilation.compileDependencyFiles

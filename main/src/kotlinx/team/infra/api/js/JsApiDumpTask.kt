@@ -11,9 +11,6 @@ import org.jetbrains.kotlin.gradle.dsl.*
 import org.jetbrains.kotlin.gradle.plugin.*
 import org.jetbrains.kotlin.incremental.components.*
 import org.jetbrains.kotlin.js.resolve.*
-import org.jetbrains.kotlin.konan.library.*
-import org.jetbrains.kotlin.konan.target.*
-import org.jetbrains.kotlin.konan.util.*
 import org.jetbrains.kotlin.name.*
 import org.jetbrains.kotlin.resolve.*
 import org.jetbrains.kotlin.serialization.js.*
@@ -21,7 +18,7 @@ import org.jetbrains.kotlin.storage.*
 import org.jetbrains.kotlin.utils.*
 import java.io.*
 
-open class JsApiCheckTask : DefaultTask() {
+open class JsApiDumpTask : DefaultTask() {
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
     lateinit var inputClassesDirs: FileCollection
@@ -82,10 +79,10 @@ fun Project.createJsApiCheckTask(
     target: KotlinTarget,
     mainCompilation: KotlinCompilation<KotlinCommonOptions>,
     apiBuildDir: File
-): TaskProvider<JsApiCheckTask> {
-    return task<JsApiCheckTask>("${target.name}CheckApi") {
-        group = "verification"
-        description = "Runs JS API checks for 'main' compilation of target '${target.name}'"
+): TaskProvider<JsApiDumpTask> {
+    return task<JsApiDumpTask>("${target.name}DumpApi") {
+        group = "other"
+        description = "Dumps JS API for 'main' compilation of target '${target.name}'"
 
         inputClassesDirs = mainCompilation.output.allOutputs
         inputDependencies = mainCompilation.compileDependencyFiles
