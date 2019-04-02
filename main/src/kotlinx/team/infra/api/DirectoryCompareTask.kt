@@ -15,6 +15,9 @@ open class DirectoryCompareTask : DefaultTask() {
     @PathSensitive(PathSensitivity.RELATIVE)
     lateinit var actualDir: File
 
+    @OutputFile @Optional
+    val dummyOutputFile : File? = null
+    
     var subject: String = "Directory comparison"
 
     @TaskAction
