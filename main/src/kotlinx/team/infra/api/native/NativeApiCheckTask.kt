@@ -1,28 +1,21 @@
-package kotlinx.team.infra.api
+package kotlinx.team.infra.api.native
 
 import kotlinx.team.infra.*
+import kotlinx.team.infra.api.*
 import org.gradle.api.*
 import org.gradle.api.file.*
 import org.gradle.api.tasks.*
 import org.jetbrains.kotlin.config.*
-import org.jetbrains.kotlin.descriptors.impl.*
+import org.jetbrains.kotlin.gradle.dsl.*
 import org.jetbrains.kotlin.gradle.plugin.*
-import org.jetbrains.kotlin.incremental.components.*
-import org.jetbrains.kotlin.js.resolve.*
+import org.jetbrains.kotlin.gradle.plugin.mpp.*
 import org.jetbrains.kotlin.konan.library.*
 import org.jetbrains.kotlin.konan.target.*
 import org.jetbrains.kotlin.konan.util.*
-import org.jetbrains.kotlin.name.*
-import org.jetbrains.kotlin.resolve.*
-import org.jetbrains.kotlin.serialization.js.*
 import org.jetbrains.kotlin.storage.*
-import org.jetbrains.kotlin.utils.*
 import java.io.*
 
-open class ApiCheckTask : DefaultTask() {
-    @Input
-    lateinit var platformType: KotlinPlatformType
-
+open class NativeApiCheckTask : DefaultTask() {
     @Input
     lateinit var nativeTarget: String
 
@@ -39,62 +32,13 @@ open class ApiCheckTask : DefaultTask() {
 
     @TaskAction
     fun generate() {
-        val generator = ApiGenerator(outputApiDir)
+        val generator = ModuleDescriptorApiGenerator(project, outputApiDir)
         inputClassesDirs.files.forEach { lib ->
-            when (platformType) {
-                KotlinPlatformType.native -> generator.generateNative(lib)
-                KotlinPlatformType.js -> generator.generateJavaScript(lib)
-                KotlinPlatformType.jvm, KotlinPlatformType.androidJvm -> generator.generateJvm(lib)
-                KotlinPlatformType.common -> generator.generateCommon(lib)
-            }
+            generator.generateNative(lib)
         }
     }
 
-    private fun ApiGenerator.generateCommon(lib: File) {
-        println("COMMON: $lib")
-    }
-
-    private fun ApiGenerator.generateJvm(lib: File) {
-        println("JVM: $lib")
-    }
-
-    private fun ApiGenerator.generateJavaScript(lib: File) {
-        val configuration = CompilerConfiguration()
-        val languageVersionSettings = configuration.languageVersionSettings
-
-        val modules = KotlinJavascriptMetadataUtils.loadMetadata(lib)
-        modules.forEach { metadata ->
-            val storageManager = LockBasedStorageManager()
-            val skipCheck = languageVersionSettings.getFlag(AnalysisFlags.skipMetadataVersionCheck)
-            assert(metadata.version.isCompatible() || skipCheck) {
-                "Expected JS metadata version " + JsMetadataVersion.INSTANCE + ", but actual metadata version is " + metadata.version
-            }
-
-            val module = ModuleDescriptorImpl(
-                Name.special("<" + metadata.moduleName + ">"),
-                storageManager,
-                JsPlatform.builtIns
-            )
-            val (header, body) = KotlinJavascriptSerializationUtil.readModuleAsProto(
-                metadata.body,
-                metadata.version
-            )
-            val provider = createKotlinJavascriptPackageFragmentProvider(
-                storageManager,
-                module,
-                header,
-                body,
-                metadata.version,
-                CompilerDeserializationConfiguration(languageVersionSettings),
-                LookupTracker.DO_NOTHING
-            )
-            module.setDependencies(listOf(module, JsPlatform.builtIns.builtInsModule))
-            module.initialize(provider)
-            generate(module)
-        }
-    }
-
-    private fun ApiGenerator.generateNative(lib: File) {
+    private fun ModuleDescriptorApiGenerator.generateNative(lib: File) {
         if (!lib.exists())
             return // empty sources yield missing output file. no file - no api
 
@@ -140,5 +84,25 @@ open class ApiCheckTask : DefaultTask() {
         module.setDependencies(listOf(module) + dependenciesDescriptors + forwardDeclarationsModule)
         generate(module)
 
+    }
+}
+
+fun Project.createNativeApiCheckTask(
+    target: KotlinTarget,
+    mainCompilation: KotlinCompilation<KotlinCommonOptions>,
+    apiBuildDir: File
+): TaskProvider<NativeApiCheckTask> {
+    return task<NativeApiCheckTask>("${target.name}CheckApi") {
+        group = "verification"
+        description = "Runs Native API checks for 'main' compilation of target '${target.name}'"
+        nativeTarget = (target as? KotlinNativeTarget)?.konanTarget?.name ?: ""
+
+        inputClassesDirs = mainCompilation.output.allOutputs
+        inputDependencies = mainCompilation.compileDependencyFiles
+        outputApiDir = apiBuildDir
+
+        doFirst {
+            apiBuildDir.mkdirs()
+        }
     }
 }

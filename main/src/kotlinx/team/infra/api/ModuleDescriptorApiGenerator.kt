@@ -1,5 +1,6 @@
 package kotlinx.team.infra.api
 
+import org.gradle.api.*
 import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.descriptors.impl.*
 import org.jetbrains.kotlin.name.*
@@ -9,7 +10,7 @@ import org.jetbrains.kotlin.resolve.descriptorUtil.*
 import org.jetbrains.kotlin.resolve.scopes.*
 import java.io.*
 
-class ApiGenerator(private val outputDir: File, private val onlyPublic: Boolean = true) {
+class ModuleDescriptorApiGenerator(val project: Project, private val outputDir: File, private val onlyPublic: Boolean = true) {
     private val renderer = DescriptorRenderer.withOptions {
         actualPropertiesInPrimaryConstructor = true
         alwaysRenderModifiers = true
@@ -38,7 +39,7 @@ class ApiGenerator(private val outputDir: File, private val onlyPublic: Boolean 
         val fragments = packageView.fragments.filter { it.module == module }
         val unified = fragments.groupBy { it.fqName }
         for ((name, parts) in unified) {
-            appendln("package ${name}")
+            appendln("package $name")
             appendln("{")
             parts.forEach { packageFragment ->
                 val allDescriptors = DescriptorUtils.getAllDescriptors(packageFragment.getMemberScope())
