@@ -4,13 +4,13 @@ import groovy.lang.*
 import kotlinx.team.infra.node.*
 import org.gradle.api.*
 import org.gradle.api.artifacts.*
-import org.gradle.api.file.*
 import org.gradle.api.tasks.*
 import org.gradle.util.*
 import org.jetbrains.kotlin.gradle.dsl.*
 import org.jetbrains.kotlin.gradle.plugin.*
 import org.jetbrains.kotlin.gradle.plugin.mpp.*
 import java.io.*
+import java.util.concurrent.*
 
 class MochaConfiguration {
     var version: String? = null
@@ -100,40 +100,33 @@ private fun Project.configureTarget(target: KotlinTarget, node: NodeConfiguratio
     }
 }
 
-private fun Project.dependencyFiles(
-    mainCompilation: KotlinJsCompilation,
-    testCompilation: KotlinJsCompilation
-): ConfigurableFileCollection {
-    val name = testCompilation.runtimeDependencyConfigurationName
+private fun Project.dependencyFiles(mainCompilation: KotlinJsCompilation, testCompilation: KotlinJsCompilation) = files(
+    collectDependenciesInOrder(testCompilation),
+    mainCompilation.output.allOutputs.asFileTree,
+    testCompilation.output.allOutputs.asFileTree
+).builtBy(mainCompilation, testCompilation)
 
-    val orderedDependencies = mutableSetOf<ResolvedDependency>()
-
-    val resolvedConfiguration = configurations.getByName(name).resolvedConfiguration
-    val moduleDependencies = resolvedConfiguration.firstLevelModuleDependencies
-
-    moduleDependencies.forEach {
-        collectDependencies(it, orderedDependencies)
-    }
-
-    val configuration = testCompilation.runtimeDependencyFiles
-
-    val moduleDependenciesFiles = orderedDependencies.flatMap { it.allModuleArtifacts }.map { it.file }.map {
-        if (it.name.endsWith(".jar")) {
-            zipTree(it.absolutePath).matching {
-                it.include("*.js")
-                it.include("*.js.map")
-            }
-        } else {
-            files(it)
+private fun Project.collectDependenciesInOrder(testCompilation: KotlinJsCompilation) = files(
+    Callable {
+        val name = testCompilation.runtimeDependencyConfigurationName
+        val orderedDependencies = mutableSetOf<ResolvedDependency>()
+        val resolvedConfiguration = configurations.getByName(name).resolvedConfiguration
+        val moduleDependencies = resolvedConfiguration.firstLevelModuleDependencies
+        moduleDependencies.forEach {
+            collectDependencies(it, orderedDependencies)
         }
-    }
 
-    return files(
-        moduleDependenciesFiles,
-        mainCompilation.output.allOutputs.asFileTree,
-        testCompilation.output.allOutputs.asFileTree
-    ).builtBy(configuration)
-}
+        orderedDependencies.flatMap { it.allModuleArtifacts }.map { it.file }.map { file ->
+            if (file.name.endsWith(".jar")) {
+                zipTree(file.absolutePath).matching {
+                    it.include("*.js")
+                    it.include("*.js.map")
+                }
+            } else {
+                files(file)
+            }
+        }
+    })
 
 fun collectDependencies(dependency: ResolvedDependency, orderedDependencies: MutableSet<ResolvedDependency>) {
     if (!orderedDependencies.contains(dependency)) {
