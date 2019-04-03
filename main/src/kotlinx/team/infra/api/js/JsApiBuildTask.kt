@@ -41,10 +41,23 @@ open class JsApiBuildTask : DefaultTask() {
     private fun ModuleDescriptorApiGenerator.generateJavaScript(lib: File) {
         val configuration = CompilerConfiguration()
         val languageVersionSettings = configuration.languageVersionSettings
+        val storageManager = LockBasedStorageManager()
 
+        val dependencies = inputDependencies.flatMap {
+            loadDescriptors(it, languageVersionSettings, storageManager)
+        }
+        val descriptors = loadDescriptors(lib, languageVersionSettings, storageManager, dependencies)
+        descriptors.forEach { generate(it) }
+    }
+
+    private fun loadDescriptors(
+        lib: File,
+        languageVersionSettings: LanguageVersionSettings,
+        storageManager: LockBasedStorageManager,
+        dependencies: List<ModuleDescriptorImpl> = listOf()
+    ): List<ModuleDescriptorImpl> {
         val modules = KotlinJavascriptMetadataUtils.loadMetadata(lib)
-        modules.forEach { metadata ->
-            val storageManager = LockBasedStorageManager()
+        return modules.map { metadata ->
             val skipCheck = languageVersionSettings.getFlag(AnalysisFlags.skipMetadataVersionCheck)
             assert(metadata.version.isCompatible() || skipCheck) {
                 "Expected JS metadata version " + JsMetadataVersion.INSTANCE + ", but actual metadata version is " + metadata.version
@@ -68,9 +81,9 @@ open class JsApiBuildTask : DefaultTask() {
                 CompilerDeserializationConfiguration(languageVersionSettings),
                 LookupTracker.DO_NOTHING
             )
-            module.setDependencies(listOf(module, JsPlatform.builtIns.builtInsModule))
+            module.setDependencies(listOf(module, JsPlatform.builtIns.builtInsModule) + dependencies)
             module.initialize(provider)
-            generate(module)
+            module
         }
     }
 }
