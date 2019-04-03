@@ -38,6 +38,13 @@ fun Project.configureApiCheck(apiCheck: ApiCheckConfiguration) {
                 it.group = "verification"
                 it.description = "Runs API checks for 'main' compilations of all targets"
             }
+            
+            val apiPublishTask = subproject.tasks.create("publishApiToBuildLocal") {
+                it.group = "publishing"
+                it.description = "Publishes API for 'main' compilations of all targets into local build folder"
+            }
+            tasks.findByName("publishToBuildLocal")?.dependsOn(apiPublishTask)
+
             val apiSyncTask = subproject.tasks.create("syncApi") {
                 it.group = "other"
                 it.description = "Syncs API for 'main' compilations of all targets"
@@ -46,7 +53,7 @@ fun Project.configureApiCheck(apiCheck: ApiCheckConfiguration) {
             subproject.tasks.getByName("check").dependsOn(apiCheckTask)
 
             multiplatform.targets.all { target ->
-                subproject.configureTargetApiCheck(target, apiCheckTask, apiSyncTask, apiCheck)
+                subproject.configureTargetApiCheck(target, apiCheckTask, apiSyncTask, apiPublishTask, apiCheck)
             }
         }
     }
@@ -56,6 +63,7 @@ fun Project.configureTargetApiCheck(
     target: KotlinTarget,
     checkApiTask: Task,
     syncApiTask: Task,
+    publishLocalTask: Task,
     apiCheck: ApiCheckConfiguration
 ) {
     val project = this
@@ -102,23 +110,20 @@ fun Project.configureTargetApiCheck(
 
         syncApiTask.dependsOn(targetBuildApiTask, targetSyncApiTask)
 
-        val publishLocalTask = tasks.findByName("publishToBuildLocal")
-        if (publishLocalTask != null) {
-            val publishApiTask = task<Sync>("${target.name}PublishApi") {
-                group = "publishing"
-                description = "Publishes API for 'main' compilation of target '${target.name} in $project'"
-                from(apiBuildDir)
-                val publishDir = rootProject.buildDir
-                    .resolve(apiCheck.apiDir)
-                    .resolve(project.name)
-                    .resolve(targetName)
-                publishDir.mkdirs()
-                into(publishDir)
-                dependsOn(targetBuildApiTask)
-            }
-
-            publishLocalTask.dependsOn(publishApiTask)
+        val publishApiTask = task<Sync>("publish${target.name.capitalize()}ApiToBuildLocal") {
+            group = "publishing"
+            description = "Publishes API for 'main' compilation of target '${target.name} in $project'"
+            from(apiBuildDir)
+            val publishDir = rootProject.buildDir
+                .resolve(apiCheck.apiDir)
+                .resolve(project.name)
+                .resolve(targetName)
+            publishDir.mkdirs()
+            into(publishDir)
+            dependsOn(targetBuildApiTask)
         }
+
+        publishLocalTask.dependsOn(publishApiTask)
     }
 }
 
