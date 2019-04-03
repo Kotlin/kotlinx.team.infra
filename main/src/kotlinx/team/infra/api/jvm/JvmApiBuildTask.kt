@@ -1,6 +1,7 @@
 package kotlinx.team.infra.api.jvm
 
 import kotlinx.team.infra.*
+import kotlinx.team.infra.api.*
 import org.gradle.api.*
 import org.gradle.api.file.*
 import org.gradle.api.tasks.*
@@ -22,6 +23,9 @@ open class JvmApiBuildTask : DefaultTask() {
 
     @TaskAction
     fun generate() {
+        cleanup(outputApiDir)
+        outputApiDir.mkdirs()
+
         val signatures = inputClassesDirs.asFileTree.asSequence()
             .filter {
                 !it.isDirectory && it.name.endsWith(".class") && !it.name.startsWith("META-INF/")
@@ -57,8 +61,6 @@ fun Project.createJvmApiBuildTask(
         inputDependencies = mainCompilation.compileDependencyFiles
         outputApiDir = apiBuildDir
 
-        doFirst {
-            apiBuildDir.mkdirs()
-        }
+        enableWithCompilation(mainCompilation, target)
     }
 }

@@ -32,6 +32,9 @@ open class NativeApiBuildTask : DefaultTask() {
 
     @TaskAction
     fun generate() {
+        cleanup(outputApiDir)
+        outputApiDir.mkdirs()
+
         val generator = ModuleDescriptorApiGenerator(project, outputApiDir)
         inputClassesDirs.files.forEach { lib ->
             generator.generateNative(lib)
@@ -100,9 +103,6 @@ fun Project.createNativeApiBuildTask(
         inputClassesDirs = mainCompilation.output.allOutputs
         inputDependencies = mainCompilation.compileDependencyFiles
         outputApiDir = apiBuildDir
-
-        doFirst {
-            apiBuildDir.mkdirs()
-        }
+        enableWithCompilation(mainCompilation, target)
     }
 }

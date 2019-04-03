@@ -93,6 +93,7 @@ fun Project.configureTargetApiCheck(
             expectedDir = apiCheckDir
             actualDir = apiBuildDir
             dependsOn(targetBuildApiTask)
+            enableWithCompilation(mainCompilation, target)
         }
 
         checkApiTask.dependsOn(targetBuildApiTask, targetCheckApiTask)
@@ -103,6 +104,7 @@ fun Project.configureTargetApiCheck(
             from(apiBuildDir)
             into(apiCheckDir)
             dependsOn(targetBuildApiTask)
+            enableWithCompilation(mainCompilation, target)
             doFirst {
                 apiCheckDir.mkdirs()
             }
@@ -121,9 +123,21 @@ fun Project.configureTargetApiCheck(
             publishDir.mkdirs()
             into(publishDir)
             dependsOn(targetBuildApiTask)
+            enableWithCompilation(mainCompilation, target)
         }
 
         publishLocalTask.dependsOn(publishApiTask)
     }
 }
 
+fun Task.enableWithCompilation(
+    mainCompilation: KotlinCompilation<KotlinCommonOptions>,
+    target: KotlinTarget
+) {
+    onlyIf {
+        val enabled = mainCompilation.compileKotlinTask.enabled
+        if (!enabled)
+            logger.warn("$name is disabled because 'main' compilation of target '${target.name}' is not enabled")
+        enabled
+    }
+}
