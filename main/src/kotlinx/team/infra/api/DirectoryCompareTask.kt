@@ -1,5 +1,6 @@
 package kotlinx.team.infra.api
 
+import difflib.*
 import kotlinx.team.infra.*
 import org.gradle.api.*
 import org.gradle.api.file.*
@@ -15,13 +16,19 @@ open class DirectoryCompareTask : DefaultTask() {
     @PathSensitive(PathSensitivity.RELATIVE)
     lateinit var actualDir: File
 
-    @OutputFile @Optional
-    val dummyOutputFile : File? = null
-    
+    @OutputFile
+    @Optional
+    val dummyOutputFile: File? = null
+
     var subject: String = "Directory comparison"
 
     @TaskAction
     fun verify() {
+        if (!expectedDir.exists())
+            throw KotlinInfrastructureException("Expected API folder '$expectedDir' does not exist")
+        if (!actualDir.exists())
+            throw KotlinInfrastructureException("Actual API folder '$actualDir' does not exist")
+
         val actualFiles = mutableSetOf<RelativePath>()
         val expectedFiles = mutableSetOf<RelativePath>()
         logger.infra("Comparing $expectedDir and $actualDir")
@@ -54,5 +61,20 @@ open class DirectoryCompareTask : DefaultTask() {
             val diffText = diffSet.joinToString("\n\n")
             throw KotlinInfrastructureException("API check failed for $subject. Files are different.\n$diffText")
         }
+    }
+
+    private fun compareFiles(checkFile: File, builtFile: File): String? {
+        val checkText = checkFile.readText()
+        val builtText = builtFile.readText()
+        
+        // We don't compare full text because newlines on Windows & Linux/macOS are different
+        val checkLines = checkText.lines()
+        val builtLines = builtText.lines()
+        if (checkLines == builtLines)
+            return null
+        
+        val patch = DiffUtils.diff(checkLines, builtLines)
+        val diff = DiffUtils.generateUnifiedDiff(checkFile.toString(), builtFile.toString(), checkLines, patch, 3)
+        return diff.joinToString("\n")
     }
 }

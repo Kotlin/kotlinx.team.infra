@@ -15,7 +15,7 @@ import org.jetbrains.kotlin.konan.util.*
 import org.jetbrains.kotlin.storage.*
 import java.io.*
 
-open class NativeApiDumpTask : DefaultTask() {
+open class NativeApiBuildTask : DefaultTask() {
     @Input
     lateinit var nativeTarget: String
 
@@ -87,14 +87,14 @@ open class NativeApiDumpTask : DefaultTask() {
     }
 }
 
-fun Project.createNativeApiCheckTask(
+fun Project.createNativeApiBuildTask(
     target: KotlinTarget,
     mainCompilation: KotlinCompilation<KotlinCommonOptions>,
     apiBuildDir: File
-): TaskProvider<NativeApiDumpTask> {
-    return task<NativeApiDumpTask>("${target.name}DumpApi") {
-        group = "other"
-        description = "Dumps Native API for 'main' compilation of target '${target.name}'"
+): TaskProvider<NativeApiBuildTask> {
+    return task<NativeApiBuildTask>("${target.name}BuildApi") {
+        group = "build"
+        description = "Builds Native API for 'main' compilation of target '${target.name}'"
         nativeTarget = (target as? KotlinNativeTarget)?.konanTarget?.name ?: ""
 
         inputClassesDirs = mainCompilation.output.allOutputs

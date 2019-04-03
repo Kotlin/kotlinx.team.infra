@@ -1,16 +1,15 @@
-package kotlinx.team.infra.api;
+package kotlinx.team.infra.api
 
-import difflib.*
 import kotlinx.team.infra.*
 import kotlinx.team.infra.api.js.*
 import kotlinx.team.infra.api.jvm.*
 import kotlinx.team.infra.api.native.*
 import org.gradle.api.*
+import org.gradle.api.tasks.*
 import org.jetbrains.kotlin.gradle.dsl.*
 import org.jetbrains.kotlin.gradle.plugin.*
-import java.io.*
 
-public class ApiCheckConfiguration {
+class ApiCheckConfiguration {
     var includeProjects: MutableList<String> = mutableListOf()
     fun include(vararg name: String) {
         includeProjects.addAll(name)
@@ -39,11 +38,15 @@ fun Project.configureApiCheck(apiCheck: ApiCheckConfiguration) {
                 it.group = "verification"
                 it.description = "Runs API checks for 'main' compilations of all targets"
             }
+            val apiSyncTask = subproject.tasks.create("syncApi") {
+                it.group = "other"
+                it.description = "Syncs API for 'main' compilations of all targets"
+            }
 
             subproject.tasks.getByName("check").dependsOn(apiCheckTask)
 
             multiplatform.targets.all { target ->
-                subproject.configureTargetApiCheck(target, apiCheckTask, apiCheck)
+                subproject.configureTargetApiCheck(target, apiCheckTask, apiSyncTask, apiCheck)
             }
         }
     }
@@ -52,8 +55,10 @@ fun Project.configureApiCheck(apiCheck: ApiCheckConfiguration) {
 fun Project.configureTargetApiCheck(
     target: KotlinTarget,
     checkApiTask: Task,
+    syncApiTask: Task,
     apiCheck: ApiCheckConfiguration
 ) {
+    val project = this
     val targetName = target.name
     val mainCompilation = target.compilations.findByName("main") ?: run {
         logger.infra("Cannot find 'main' compilation of $target in $this")
@@ -61,46 +66,59 @@ fun Project.configureTargetApiCheck(
     }
 
     logger.infra("Configuring $target of $this for API check")
-    val apiDumpDir = file(buildDir.resolve(apiCheck.apiDir).resolve(targetName))
+    val apiBuildDir = file(buildDir.resolve(apiCheck.apiDir).resolve(targetName))
     val apiCheckDir = file(projectDir.resolve(apiCheck.apiDir).resolve(targetName))
 
-    val targetDumpApiTask = when (target.platformType) {
+    val targetBuildApiTask = when (target.platformType) {
         KotlinPlatformType.common -> null
         KotlinPlatformType.jvm,
-        KotlinPlatformType.androidJvm -> createJvmApiCheckTask(target, mainCompilation, apiDumpDir)
-        KotlinPlatformType.js -> createJsApiCheckTask(target, mainCompilation, apiDumpDir)
-        KotlinPlatformType.native -> createNativeApiCheckTask(target, mainCompilation, apiDumpDir)
+        KotlinPlatformType.androidJvm -> createJvmApiBuildTask(target, mainCompilation, apiBuildDir)
+        KotlinPlatformType.js -> createJsApiBuildTask(target, mainCompilation, apiBuildDir)
+        KotlinPlatformType.native -> createNativeApiBuildTask(target, mainCompilation, apiBuildDir)
     }
 
-    if (targetDumpApiTask != null) {
-        if (!apiCheckDir.exists()) {
-            logger.warn("INFRA: API folder '$apiCheckDir' does not exist, API verification will be skipped")
-            logger.warn("INFRA: You can copy generated API from '$apiDumpDir'")
-        }
+    if (targetBuildApiTask != null) {
         val targetCheckApiTask = task<DirectoryCompareTask>("${target.name}CheckApi") {
             group = "verification"
-            subject = "'main' compilation of target '${target.name} in ${this@configureTargetApiCheck}'"
+            subject = "'main' compilation of target '${target.name} in $project'"
             description = "Checks API for $subject"
-            onlyIf { apiCheckDir.exists() }
             expectedDir = apiCheckDir
-            actualDir = apiDumpDir
-            dependsOn(targetDumpApiTask)
+            actualDir = apiBuildDir
+            dependsOn(targetBuildApiTask)
         }
 
-        checkApiTask.dependsOn(targetDumpApiTask, targetCheckApiTask)
+        checkApiTask.dependsOn(targetBuildApiTask, targetCheckApiTask)
+
+        val targetSyncApiTask = task<Sync>("${target.name}SyncApi") {
+            group = "other"
+            description = "Syncs API for 'main' compilation of target '${target.name} in $project'"
+            from(apiBuildDir)
+            into(apiCheckDir)
+            dependsOn(targetBuildApiTask)
+            doFirst {
+                apiCheckDir.mkdirs()
+            }
+        }
+
+        syncApiTask.dependsOn(targetBuildApiTask, targetSyncApiTask)
+
+        val publishLocalTask = tasks.findByName("publishToBuildLocal")
+        if (publishLocalTask != null) {
+            val publishApiTask = task<Sync>("${target.name}PublishApi") {
+                group = "publishing"
+                description = "Publishes API for 'main' compilation of target '${target.name} in $project'"
+                from(apiBuildDir)
+                val publishDir = rootProject.buildDir
+                    .resolve(apiCheck.apiDir)
+                    .resolve(project.name)
+                    .resolve(targetName)
+                publishDir.mkdirs()
+                into(publishDir)
+                dependsOn(targetBuildApiTask)
+            }
+
+            publishLocalTask.dependsOn(publishApiTask)
+        }
     }
-}
-
-fun compareFiles(checkFile: File, dumpFile: File): String? {
-    val checkText = checkFile.readText()
-    val dumpText = dumpFile.readText()
-    if (checkText == dumpText)
-        return null
-
-    val checkLines = checkText.lines()
-    val dumpLines = dumpText.lines()
-    val patch = DiffUtils.diff(checkLines, dumpLines)
-    val diff = DiffUtils.generateUnifiedDiff(checkFile.toString(), dumpFile.toString(), checkLines, patch, 3)
-    return diff.joinToString("\n")
 }
 

@@ -18,7 +18,7 @@ import org.jetbrains.kotlin.storage.*
 import org.jetbrains.kotlin.utils.*
 import java.io.*
 
-open class JsApiDumpTask : DefaultTask() {
+open class JsApiBuildTask : DefaultTask() {
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
     lateinit var inputClassesDirs: FileCollection
@@ -75,14 +75,14 @@ open class JsApiDumpTask : DefaultTask() {
     }
 }
 
-fun Project.createJsApiCheckTask(
+fun Project.createJsApiBuildTask(
     target: KotlinTarget,
     mainCompilation: KotlinCompilation<KotlinCommonOptions>,
     apiBuildDir: File
-): TaskProvider<JsApiDumpTask> {
-    return task<JsApiDumpTask>("${target.name}DumpApi") {
-        group = "other"
-        description = "Dumps JS API for 'main' compilation of target '${target.name}'"
+): TaskProvider<JsApiBuildTask> {
+    return task<JsApiBuildTask>("${target.name}BuildApi") {
+        group = "build"
+        description = "Builds JS API for 'main' compilation of target '${target.name}'"
 
         inputClassesDirs = mainCompilation.output.allOutputs
         inputDependencies = mainCompilation.compileDependencyFiles

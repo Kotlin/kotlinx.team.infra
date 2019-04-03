@@ -35,6 +35,8 @@ class InfraPlugin : Plugin<Project> {
         extension.afterNode {
             configureNode(it)
         }
+        
+        // Should be after publishing because we add APIs to publishToBuildLocal for teamcity artifacts
         extension.afterApiCheck {
             configureApiCheck(it)
         }

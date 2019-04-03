@@ -8,7 +8,7 @@ import org.jetbrains.kotlin.gradle.dsl.*
 import org.jetbrains.kotlin.gradle.plugin.*
 import java.io.*
 
-open class JvmApiDumpTask : DefaultTask() {
+open class JvmApiBuildTask : DefaultTask() {
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
     lateinit var inputClassesDirs: FileCollection
@@ -44,14 +44,14 @@ open class JvmApiDumpTask : DefaultTask() {
     }
 }
 
-fun Project.createJvmApiCheckTask(
+fun Project.createJvmApiBuildTask(
     target: KotlinTarget,
     mainCompilation: KotlinCompilation<KotlinCommonOptions>,
     apiBuildDir: File
-): TaskProvider<JvmApiDumpTask> {
-    return task<JvmApiDumpTask>("${target.name}DumpApi") {
-        group = "other"
-        description = "Dumps JVM API for 'main' compilation of target '${target.name}'"
+): TaskProvider<JvmApiBuildTask> {
+    return task<JvmApiBuildTask>("${target.name}BuildApi") {
+        group = "build"
+        description = "Builds JVM API for 'main' compilation of target '${target.name}'"
 
         inputClassesDirs = mainCompilation.output.allOutputs
         inputDependencies = mainCompilation.compileDependencyFiles
