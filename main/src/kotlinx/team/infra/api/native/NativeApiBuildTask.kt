@@ -69,7 +69,7 @@ open class NativeApiBuildTask : DefaultTask() {
 
         val library = createKonanLibrary(konanFile, ABI_VERSION, konanTarget, false)
         val unresolvedDependencies = library.unresolvedDependencies
-        val storageManager = LockBasedStorageManager()
+        val storageManager = LockBasedStorageManager("Inspect")
 
         val module = factory.createDescriptorAndNewBuiltIns(library, versionSpec, storageManager)
 

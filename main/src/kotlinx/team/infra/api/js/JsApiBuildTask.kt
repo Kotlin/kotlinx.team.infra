@@ -44,7 +44,7 @@ open class JsApiBuildTask : DefaultTask() {
     private fun ModuleDescriptorApiGenerator.generateJavaScript(lib: File) {
         val configuration = CompilerConfiguration()
         val languageVersionSettings = configuration.languageVersionSettings
-        val storageManager = LockBasedStorageManager()
+        val storageManager = LockBasedStorageManager("Inspect")
 
         val dependencies = inputDependencies.flatMap {
             loadDescriptors(it, languageVersionSettings, storageManager)

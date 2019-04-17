@@ -4,11 +4,14 @@ import groovy.lang.*
 import kotlinx.team.infra.node.*
 import org.gradle.api.*
 import org.gradle.api.artifacts.*
+import org.gradle.api.artifacts.component.*
+import org.gradle.api.file.*
 import org.gradle.api.tasks.*
 import org.gradle.util.*
 import org.jetbrains.kotlin.gradle.dsl.*
 import org.jetbrains.kotlin.gradle.plugin.*
 import org.jetbrains.kotlin.gradle.plugin.mpp.*
+import org.jetbrains.kotlin.gradle.tasks.*
 import java.io.*
 import java.util.concurrent.*
 
@@ -85,7 +88,20 @@ private fun Project.configureTarget(target: KotlinTarget, node: NodeConfiguratio
         dependsOn(mainCompilation.compileKotlinTask)
         dependsOn(rootProject.tasks.named("nodePrepare"))
 
-        from(dependencyFiles(mainCompilation, testCompilation))
+        from(mainCompilation.output) {
+            transformSourceMaps(mainCompilation.output.classesDirs)
+        }
+        from(testCompilation.output) {
+            transformSourceMaps(testCompilation.output.classesDirs)
+        }
+
+        from(dependencyFiles(mainCompilation, testCompilation)) {
+            val configurationName = testCompilation.runtimeDependencyConfigurationName
+            val configuration = configurations.getByName(configurationName)
+            val dependencyOutputFolders = discoverOutputFolders(configuration)
+            transformSourceMaps(dependencyOutputFolders)
+        }
+        
         into(project.buildDir.resolve("node_modules"))
     }
 
@@ -100,7 +116,11 @@ private fun Project.configureTarget(target: KotlinTarget, node: NodeConfiguratio
     }
 }
 
-private fun Project.dependencyFiles(mainCompilation: KotlinJsCompilation, testCompilation: KotlinJsCompilation) = files(
+private fun Project.dependencyFiles(mainCompilation: KotlinJsCompilation, testCompilation: KotlinJsCompilation) = 
+    collectDependenciesInOrder(testCompilation)
+        .builtBy(mainCompilation.runtimeDependencyFiles, testCompilation.runtimeDependencyFiles)
+
+private fun Project.dependencyAndBuiltFiles(mainCompilation: KotlinJsCompilation, testCompilation: KotlinJsCompilation) = files(
     collectDependenciesInOrder(testCompilation),
     mainCompilation.output.allOutputs.asFileTree,
     testCompilation.output.allOutputs.asFileTree
@@ -177,7 +197,7 @@ private fun Project.createTestMochaNodeTask(
     description = "Runs tests with Mocha/Node for 'test' compilation of target '$targetName'"
 
     script = File(config.node_modules, "mocha/bin/mocha").absolutePath
-    arguments(testFile.absolutePath, "-a", "no-sandbox")
+    arguments(testFile.absolutePath, "-a", "no-sandbox", "--full-trace")
 
     if (node.packages.contains("source-map-support"))
         arguments("--require", "source-map-support/register")
@@ -202,7 +222,7 @@ private fun Project.createTestMochaChromeTask(
         val testPage = File(dependenciesFolder, "${targetName}TestMochaChrome.html")
 
         doFirst {
-            val dependenciesOrder = dependencyFiles(mainCompilation, testCompilation)
+            val dependenciesOrder = dependencyAndBuiltFiles(mainCompilation, testCompilation)
             val dependenciesIndex = dependenciesOrder.map { it.name }
             val dependencyText = dependenciesTask.outputs.files.asFileTree
                 .filter {
@@ -270,4 +290,93 @@ private fun NodeTask.configureTestMocha(
     advanced {
         it.workingDir = project.projectDir
     }
+}
+
+private fun Project.discoverOutputFolders(configuration: Configuration) = files(Callable {
+    // This is magic. I'm sure I will not understand it in a week when I come back.
+    // So lets walk through…
+    // Configuration dependencies are just what's specified, so we need resolvedConfiguration
+    // to get what they resolved to. 
+    val resolvedConfiguration = configuration.resolvedConfiguration
+
+    // Now we need module dependencies, but only to projects.
+    // This is the only way I've found to separate projects from others – by their artifact component id
+    // Which is of type `ProjectComponentIdentifier`, so here we build map from module id (maven coords) to project
+    val resolvedModules = resolvedConfiguration.firstLevelModuleDependencies.toMutableSet()
+    val projectIds = resolvedConfiguration.resolvedArtifacts.mapNotNull {
+        when (val component = it.id.componentIdentifier) {
+            is ProjectComponentIdentifier ->
+                it.moduleVersion.id to rootProject.project(component.projectName)
+            else -> null
+        }
+    }.toMap()
+
+    // Now we get all dependencies and combine them into `allModules` which is all transitive dependencies  
+    val transitive = resolvedModules.flatMapTo(mutableSetOf()) { it.children }
+    val allModules = (resolvedModules + transitive)
+
+    // Now find those that are projects and select a configuration from each using resolved data 
+    val resolvedProjectConfigurations = allModules.mapNotNull {
+        projectIds[it.module.id]?.configurations?.getByName(it.configuration)
+    }
+
+    // Woa, we are almost there, we have configuration in the target project. 
+    // Now the configuration itself provides artifacts that are JAR files already packed.
+    // And it actually not the configuration itself, but something it extends and such.
+    // So we need to get hierarchy of configurations, find those that can be resolved and get their task
+    // dependencies. This way we find JAR tasks, but we need compile tasks! 
+    // No problem, traverse task dependencies one more time! Hackery hack… 
+    // 
+    // Voila! Kotlin2JsCompile task is found, and we can just get its `outputFile`, to which source map is relative.
+    val dependencyOutputFolders = resolvedProjectConfigurations.flatMap { config ->
+        config.hierarchy.flatMap { c ->
+            if (c.isCanBeResolved) {
+                c.artifacts
+                    .flatMap { it.buildDependencies.getDependencies(null) } // JAR tasks
+                    .flatMap { it.taskDependencies.getDependencies(null) } // Compile tasks
+                    .filterIsInstance<Kotlin2JsCompile>()
+                    .map { it.outputFile.parentFile }
+            } else
+                emptyList()
+        }
+    }
+    dependencyOutputFolders
+})
+
+/// Process .js.map files by replacing relative paths with absolute paths using provided roots
+private fun AbstractCopyTask.transformSourceMaps(roots: FileCollection) {
+    //println("TRANSFORM: roots: ${roots.files}")
+    filesMatching("*.js.map") {
+        //  println("FILE: ${it.sourcePath} (${it.relativeSourcePath})")
+        it.filter { original ->
+            buildString {
+                var index = 0
+                while (true) {
+                    val beginMap = original.indexOf("\"../", index)
+                    if (beginMap == -1) {
+                        append(original.substring(index, original.length))
+                        return@buildString
+                    }
+                    val endMap = original.indexOf("\"", beginMap + 1)
+                    if (endMap == -1) {
+                        append(original.substring(index, original.length))
+                        return@buildString
+                    }
+                    append(original.substring(index, beginMap + 1))
+
+                    val path = original.substring(beginMap + 1, endMap)
+                    val absPath = resolveFromBases(roots, path)
+                    append(absPath)
+                    append("\"")
+                    index = endMap + 1
+                }
+
+            }
+        }
+    }
+}
+
+fun resolveFromBases(files: Iterable<File>, path: String): String {
+    val root = files.firstOrNull { it.resolve(path).exists() } ?: return path
+    return root.resolve(path).normalize().toString()
 }
