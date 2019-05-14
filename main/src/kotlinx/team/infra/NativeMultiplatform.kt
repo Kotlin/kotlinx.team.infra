@@ -12,9 +12,6 @@ import org.jetbrains.kotlin.konan.target.*
 import java.io.*
 import java.nio.file.*
 
-private val hostManager = HostManager()
-private val hostTarget = HostManager.host
-
 fun Project.configureNativeMultiplatform() {
     val multiplatformExtensionClass =
         tryGetClass<KotlinMultiplatformExtension>("org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension")
@@ -60,6 +57,9 @@ abstract class NativeInfraExtension(
 
 class NativeIdeaInfraExtension(project: Project, kotlin: KotlinMultiplatformExtension) :
     NativeInfraExtension(project, kotlin) {
+
+    private val hostManager = HostManager()
+    private val hostTarget = HostManager.host
 
     private val hostPreset = kotlin.presets.filterIsInstance<KotlinNativeTargetPreset>().single { preset ->
         hostManager.isEnabled(preset.konanTarget) && hostTarget == preset.konanTarget
