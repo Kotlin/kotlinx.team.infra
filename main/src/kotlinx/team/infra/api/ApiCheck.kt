@@ -82,7 +82,7 @@ fun Project.configureTargetApiCheck(
         KotlinPlatformType.jvm,
         KotlinPlatformType.androidJvm -> createJvmApiBuildTask(target, mainCompilation, apiBuildDir)
         KotlinPlatformType.js -> createJsApiBuildTask(target, mainCompilation, apiBuildDir)
-        KotlinPlatformType.native -> null //createNativeApiBuildTask(target, mainCompilation, apiBuildDir)
+        KotlinPlatformType.native -> createNativeApiBuildTask(target, mainCompilation, apiBuildDir)
     }
 
     if (targetBuildApiTask != null) {

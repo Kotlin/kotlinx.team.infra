@@ -58,7 +58,8 @@ abstract class NativeInfraExtension(
 class NativeIdeaInfraExtension(project: Project, kotlin: KotlinMultiplatformExtension) :
     NativeInfraExtension(project, kotlin) {
 
-    private val hostManager = HostManager()
+    private val hostManager = createHostManager()
+
     private val hostTarget = HostManager.host
 
     private val hostPreset = kotlin.presets.filterIsInstance<KotlinNativeTargetPreset>().single { preset ->
@@ -155,4 +156,11 @@ class ProvidedPathResolver(
 
     override fun defaultLinks(noStdLib: Boolean, noDefaultLibs: Boolean): List<org.jetbrains.kotlin.konan.file.File> =
         emptyList()
+}
+
+private fun createHostManager(): HostManager {
+    val managerClass = HostManager::class.java
+    val constructors = managerClass.constructors
+    val constructor = constructors.first { it.parameterCount == 0 }
+    return constructor.newInstance() as HostManager
 }
