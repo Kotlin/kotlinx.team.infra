@@ -60,7 +60,7 @@ dependencies {
     api group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib-jdk7', version: kotlin_version
     api group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib-jdk8', version: kotlin_version
 
-    compileOnly group: 'org.jetbrains.kotlin', name: 'kotlin-native-library-reader', version: kotlin_version, {
+    compile group: 'org.jetbrains.kotlin', name: 'kotlin-native-library-reader', version: kotlin_version, {
         exclude group: 'org.jetbrains.kotlin', module: 'kotlin-compiler'
     }
     compileOnly group: 'org.jetbrains.kotlin', name: 'kotlin-compiler', version: kotlin_version
