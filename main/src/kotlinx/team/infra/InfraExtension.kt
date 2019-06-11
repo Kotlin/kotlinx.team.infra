@@ -17,18 +17,6 @@ open class InfraExtension(val project: Project) {
         publishingHandler?.invoke(publishing)
     }    
     
-    
-    val node = NodeConfiguration()
-    private var nodeHandler: ((NodeConfiguration) -> Unit)? = null
-    internal fun afterNode(handler: (NodeConfiguration) -> Unit) {
-        nodeHandler = handler
-    }
-
-    fun node(configureClosure: Closure<NodeConfiguration>) {
-        ConfigureUtil.configureSelf(configureClosure, node)
-        nodeHandler?.invoke(node)
-    }
-    
     val teamcity = TeamCityConfiguration()
     private var teamcityHandler: ((TeamCityConfiguration) -> Unit)? = null
     internal fun afterTeamCity(handler: (TeamCityConfiguration) -> Unit) {

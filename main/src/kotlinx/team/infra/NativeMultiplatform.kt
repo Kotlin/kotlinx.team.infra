@@ -2,19 +2,11 @@ package kotlinx.team.infra
 
 import groovy.lang.*
 import org.gradle.api.*
-import org.gradle.api.logging.*
 import org.gradle.api.plugins.*
 import org.gradle.util.*
-import org.jetbrains.kotlin.config.*
-import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.gradle.dsl.*
 import org.jetbrains.kotlin.gradle.plugin.mpp.*
-import org.jetbrains.kotlin.konan.library.*
 import org.jetbrains.kotlin.konan.target.*
-import org.jetbrains.kotlin.konan.util.*
-import org.jetbrains.kotlin.storage.*
-import java.io.*
-import java.nio.file.*
 
 fun Project.configureNativeMultiplatform() {
     val multiplatformExtensionClass =
@@ -121,84 +113,6 @@ class NativeBuildInfraExtension(project: Project, kotlin: KotlinMultiplatformExt
             sourceSet.dependsOn(nativeTest)
         }
     }
-}
-
- fun Project.createModuleDescriptor(nativeTarget: String, lib: File, dependencyPaths: Set<File>): ModuleDescriptor {
-    if (nativeTarget.isEmpty())
-        throw KotlinInfrastructureException("nativeTarget should be specified for API generator for native targets")
-
-    val konanTarget = PredefinedKonanTargets.getByName(nativeTarget)!!
-    val versionSpec = LanguageVersionSettingsImpl(
-        LanguageVersion.LATEST_STABLE,
-        ApiVersion.LATEST_STABLE
-    )
-    val ABI_VERSION = 8
-
-    val pathResolver = ProvidedPathResolver(logger, dependencyPaths, konanTarget)
-    val libraryResolver = pathResolver.libraryResolver(ABI_VERSION)
-
-    val factory = KonanFactories.DefaultDeserializedDescriptorFactory
-
-    val konanFile = org.jetbrains.kotlin.konan.file.File(lib.canonicalPath)
-
-    val library = createKonanLibrary(konanFile, ABI_VERSION, konanTarget, false)
-    val unresolvedDependencies = library.unresolvedDependencies
-    val storageManager = LockBasedStorageManager("Inspect")
-
-    val module = factory.createDescriptorAndNewBuiltIns(library, versionSpec, storageManager)
-
-    val dependencies = libraryResolver.resolveWithDependencies(unresolvedDependencies)
-    val dependenciesResolved = KonanFactories.DefaultResolvedDescriptorsFactory.createResolved(
-        dependencies,
-        storageManager,
-        null,
-        versionSpec
-    )
-
-    val dependenciesDescriptors = dependenciesResolved.resolvedDescriptors
-    val forwardDeclarationsModule = dependenciesResolved.forwardDeclarationsModule
-
-    module.setDependencies(listOf(module) + dependenciesDescriptors + forwardDeclarationsModule)
-    return module
-}
-
-class ProvidedPathResolver(
-    private val logger: Logger,
-    private val dependencies: Set<File>,
-    override val target: KonanTarget
-) : SearchPathResolverWithTarget {
-
-    override val searchRoots: List<org.jetbrains.kotlin.konan.file.File> get() = emptyList()
-
-    private val nameMap = dependencies
-        // TODO: what's wrong with JARs? They seem common libs, how does native ignores them?
-        .filter { it.extension != "jar" }
-        .map {
-            val file = org.jetbrains.kotlin.konan.file.File(it.absolutePath)
-            // Need to load library to know its uniqueName, some libs like atomicfu has it different from klib file name
-            createKonanLibrary(file, 1, target)
-        }
-        .associateBy { it.uniqueName }
-        .mapValues { it.value.libraryFile }
-
-    override fun resolve(givenPath: String): org.jetbrains.kotlin.konan.file.File {
-        val path = Paths.get(givenPath)
-        return when {
-            path.isAbsolute -> org.jetbrains.kotlin.konan.file.File(path)
-            else -> {
-                val file = nameMap[givenPath]
-                if (file != null)
-                    return file
-
-                logger.error("Cannot resolve library $givenPath with the following dependencies:")
-                logger.error(dependencies.joinToString(prefix = "  ", separator = "\n  "))
-                throw Exception("Cannot resolve library '$givenPath' with $nameMap")
-            }
-        }
-    }
-
-    override fun defaultLinks(noStdLib: Boolean, noDefaultLibs: Boolean): List<org.jetbrains.kotlin.konan.file.File> =
-        emptyList()
 }
 
 private fun createHostManager(): HostManager {

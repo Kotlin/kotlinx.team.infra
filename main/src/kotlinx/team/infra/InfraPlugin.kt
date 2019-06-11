@@ -11,7 +11,7 @@ import java.util.*
 @Suppress("unused")
 class InfraPlugin : Plugin<Project> {
     private val requiredGradleVersion = "5.1"
-    private val requiredKotlinVersion = "1.3.30"
+    private val requiredKotlinVersion = "1.3.40"
     private val INFRA_EXTENSION_NAME = "infra"
 
     override fun apply(target: Project) = target.run {
@@ -31,9 +31,6 @@ class InfraPlugin : Plugin<Project> {
 
         extension.afterPublishing {
             configurePublishing(it)
-        }
-        extension.afterNode {
-            configureNode(it)
         }
         
         // Should be after publishing because we add APIs to publishToBuildLocal for teamcity artifacts

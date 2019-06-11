@@ -1,6 +1,5 @@
 package kotlinx.team.infra.api
 
-import org.gradle.api.*
 import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.descriptors.impl.*
 import org.jetbrains.kotlin.name.*
@@ -10,7 +9,7 @@ import org.jetbrains.kotlin.resolve.descriptorUtil.*
 import org.jetbrains.kotlin.resolve.scopes.*
 import java.io.*
 
-class ModuleDescriptorApiGenerator(val project: Project, private val outputDir: File, private val onlyPublic: Boolean = true) {
+class ModuleDescriptorApiGenerator(private val outputDir: File, private val onlyPublic: Boolean = true) {
     private val renderer = DescriptorRenderer.withOptions {
         actualPropertiesInPrimaryConstructor = true
         alwaysRenderModifiers = true

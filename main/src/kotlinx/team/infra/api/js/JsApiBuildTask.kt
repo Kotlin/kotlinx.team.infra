@@ -34,8 +34,8 @@ open class JsApiBuildTask : DefaultTask() {
     fun generate() {
         cleanup(outputApiDir)
         outputApiDir.mkdirs()
-        
-        val generator = ModuleDescriptorApiGenerator(project, outputApiDir)
+
+        val generator = ModuleDescriptorApiGenerator(outputApiDir)
         inputClassesDirs.files.forEach { lib ->
             generator.generateJavaScript(lib)
         }
