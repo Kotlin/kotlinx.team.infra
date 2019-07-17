@@ -1,9 +1,7 @@
 package kotlinx.team.infra
 
-import groovy.lang.*
 import kotlinx.team.infra.api.*
 import org.gradle.api.*
-import org.gradle.util.*
 
 open class InfraExtension(val project: Project) {
     val publishing = PublishingConfiguration()
@@ -12,19 +10,19 @@ open class InfraExtension(val project: Project) {
         publishingHandler = handler
     }
 
-    fun publishing(configureClosure: Closure<PublishingConfiguration>) {
-        ConfigureUtil.configureSelf(configureClosure, publishing)
+    fun publishing(configure: Action<PublishingConfiguration>) {
+        configure.execute(publishing)
         publishingHandler?.invoke(publishing)
-    }    
-    
+    }
+
     val teamcity = TeamCityConfiguration()
     private var teamcityHandler: ((TeamCityConfiguration) -> Unit)? = null
     internal fun afterTeamCity(handler: (TeamCityConfiguration) -> Unit) {
         teamcityHandler = handler
     }
 
-    fun teamcity(configureClosure: Closure<TeamCityConfiguration>) {
-        ConfigureUtil.configureSelf(configureClosure, teamcity)
+    fun teamcity(configure: Action<TeamCityConfiguration>) {
+        configure.execute(teamcity)
         teamcityHandler?.invoke(teamcity)
     }
 
@@ -34,8 +32,8 @@ open class InfraExtension(val project: Project) {
         apiCheckHandler = handler
     }
 
-    fun apiCheck(configureClosure: Closure<ApiCheckConfiguration>) {
-        ConfigureUtil.configureSelf(configureClosure, apiCheck)
+    fun apiCheck(configure: Action<ApiCheckConfiguration>) {
+        configure.execute(apiCheck)
         apiCheckHandler?.invoke(apiCheck)
     }
 }

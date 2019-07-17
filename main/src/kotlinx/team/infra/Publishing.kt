@@ -15,11 +15,18 @@ import java.util.*
 
 open class PublishingConfiguration {
     val bintray = BintrayConfiguration()
+    fun bintray(configure: Action<BintrayConfiguration>) {
+        configure.execute(bintray)
+    }
     fun bintray(configureClosure: Closure<BintrayConfiguration>) {
         ConfigureUtil.configureSelf(configureClosure, bintray)
     }
 
     var bintrayDev: BintrayConfiguration? = null
+    fun bintrayDev(configure: Action<BintrayConfiguration>) {
+        if (bintrayDev == null) bintrayDev = BintrayConfiguration()
+        configure.execute(bintrayDev)
+    }
     fun bintrayDev(configureClosure: Closure<BintrayConfiguration>) {
         if (bintrayDev == null) bintrayDev = BintrayConfiguration()
         ConfigureUtil.configureSelf(configureClosure, bintrayDev)
