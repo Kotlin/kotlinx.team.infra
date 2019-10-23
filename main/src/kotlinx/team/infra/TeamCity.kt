@@ -27,6 +27,8 @@ fun Project.configureTeamCityLogging() {
 fun Project.configureTeamCityConfigGenerator(teamcity: TeamCityConfiguration) {
     val project = this
     task<DefaultTask>("setupTeamCity") {
+        group = "build setup"
+        description = "Generates TeamCity project build configuration scripts"
         doLast {
             val teamcityDir = projectDir.resolve(".teamcity")
             logger.infra("Setting up TeamCity configuration at $teamcityDir")
