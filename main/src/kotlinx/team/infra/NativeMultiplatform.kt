@@ -58,9 +58,12 @@ class NativeIdeaInfraExtension(project: Project, kotlin: KotlinMultiplatformExte
 
     private val hostTarget = HostManager.host
 
-    private val hostPreset = kotlin.presets.filterIsInstance<KotlinNativeTargetPreset>().single { preset ->
-        hostManager.isEnabled(preset.konanTarget) && hostTarget == preset.konanTarget
-    }
+    private val hostPreset =
+        kotlin.presets.filterIsInstance<AbstractKotlinNativeTargetPreset<*>>().let { nativePresets ->
+            nativePresets.singleOrNull { preset ->
+                hostManager.isEnabled(preset.konanTarget) && hostTarget == preset.konanTarget
+            } ?: error("No native preset of ${nativePresets.map { it.konanTarget }} matches current host target $hostTarget")
+        }
 
     init {
         project.logger.infra("Configuring native targets for $project for IDEA")

@@ -69,7 +69,7 @@ open class JsApiBuildTask : DefaultTask() {
             val module = ModuleDescriptorImpl(
                 Name.special("<" + metadata.moduleName + ">"),
                 storageManager,
-                JsPlatform.builtIns
+                JsPlatformAnalyzerServices.builtIns
             )
             val (header, body) = KotlinJavascriptSerializationUtil.readModuleAsProto(
                 metadata.body,
@@ -84,7 +84,7 @@ open class JsApiBuildTask : DefaultTask() {
                 CompilerDeserializationConfiguration(languageVersionSettings),
                 LookupTracker.DO_NOTHING
             )
-            module.setDependencies(listOf(module, JsPlatform.builtIns.builtInsModule) + dependencies)
+            module.setDependencies(listOf(module, JsPlatformAnalyzerServices.builtIns.builtInsModule) + dependencies)
             module.initialize(provider)
             module
         }

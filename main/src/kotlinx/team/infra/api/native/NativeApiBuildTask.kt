@@ -38,7 +38,7 @@ open class NativeApiBuildTask
 
     @TaskAction
     fun generate() {
-
+/*
         workerExecutor.submit(NativeApiWorker::class.java) { config ->
             config.isolationMode = IsolationMode.CLASSLOADER
             //config.classpath = runtimeClasspath
@@ -50,10 +50,12 @@ open class NativeApiBuildTask
             )
         }
         workerExecutor.await()
+
+ */
     }
 
 }
-
+/*
 class NativeApiWorker
 @Inject constructor(
     private val nativeTarget: String,
@@ -151,7 +153,7 @@ class ProvidedPathResolver(
 
     override fun defaultLinks(noStdLib: Boolean, noDefaultLibs: Boolean): List<org.jetbrains.kotlin.konan.file.File> =
         emptyList()
-}
+}*/
 
 fun Project.createNativeApiBuildTask(
     target: KotlinTarget,
