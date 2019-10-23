@@ -141,7 +141,7 @@ private fun Project.createBuildRepository(name: String, rootBuildLocal: Task) {
 
         afterEvaluate {
             tasks.named("clean", Delete::class.java) {
-                delete(dir)
+                it.delete(dir)
             }
 
             tasks.withType(PublishToMavenRepository::class.java) { task ->
