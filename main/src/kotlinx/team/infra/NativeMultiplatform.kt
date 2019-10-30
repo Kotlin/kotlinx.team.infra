@@ -90,7 +90,7 @@ class NativeIdeaInfraExtension(project: Project, kotlin: KotlinMultiplatformExte
 class NativeBuildInfraExtension(project: Project, kotlin: KotlinMultiplatformExtension) :
     NativeInfraExtension(project, kotlin) {
 
-    private val nativePresets = kotlin.presets.filterIsInstance<KotlinNativeTargetPreset>()
+    private val nativePresets = kotlin.presets.filterIsInstance<AbstractKotlinNativeTargetPreset<*>>()
 
     private val nativeMain = kotlin.sourceSets.create("nativeMain")
     private val nativeTest = kotlin.sourceSets.create("nativeTest")
