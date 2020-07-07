@@ -25,15 +25,6 @@ To debug in IntelliJ Idea, open the 'Maven Projects' tool window (View
 */
 
 version = "2018.2"
-val versionSuffixParameter = "versionSuffix"
-val teamcitySuffixParameter = "teamcitySuffix"
-val releaseVersionParameter = "releaseVersion"
-
-val bintrayUserName = "<<BINTRAY_USER>>"
-val bintrayToken = "<<BINTRAY_TOKEN>>"
-
-val platforms = listOf("Windows", "Linux", "Mac OS X")
-val jdk = "<<JDK>>"
 
 project {
     // Disable editing of project and build settings from the UI to avoid issues with TeamCity
@@ -109,7 +100,7 @@ fun Project.buildAll(versionBuild: BuildType) = BuildType {
     commonConfigure()
 }.also { buildType(it) }
 
-fun Project.build(platform: String, versionBuild: BuildType) = platform(platform, "Build") {
+fun Project.build(platform: Platform, versionBuild: BuildType) = buildType("Build", platform) {
 
     dependsOnSnapshot(versionBuild)
 
@@ -120,7 +111,7 @@ fun Project.build(platform: String, versionBuild: BuildType) = platform(platform
 
     steps {
         gradle {
-            name = "Build and Test $platform Binaries"
+            name = "Build and Test ${platform.buildTypeName()} Binaries"
             jdkHome = "%env.$jdk%"
             jvmArgs = "-Xmx1g"
             tasks = "clean publishToBuildLocal check"
@@ -133,21 +124,6 @@ fun Project.build(platform: String, versionBuild: BuildType) = platform(platform
 
     // What files to publish as build artifacts
     artifactRules = "+:build/maven=>maven\n+:build/api=>api"
-}
-
-fun BuildType.dependsOn(build: BuildType, configure: Dependency.() -> Unit) =
-    apply {
-        dependencies.dependency(build, configure)
-    }
-
-fun BuildType.dependsOnSnapshot(build: BuildType, onFailure: FailureAction = FailureAction.FAIL_TO_START, configure: SnapshotDependency.() -> Unit = {}) = apply {
-    dependencies.dependency(build) {
-        snapshot {
-            configure()
-            onDependencyFailure = onFailure
-            onDependencyCancel = FailureAction.CANCEL
-        }
-    }
 }
 
 fun Project.deployConfigure() = BuildType {
@@ -194,7 +170,7 @@ fun Project.deployPublish(configureBuild: BuildType) = BuildType {
 }.also { buildType(it) }
 
 
-fun Project.deploy(platform: String, configureBuild: BuildType) = platform(platform, "Deploy") {
+fun Project.deploy(platform: Platform, configureBuild: BuildType) = buildType("Deploy", platform) {
     type = BuildTypeSettings.Type.DEPLOYMENT
     enablePersonalBuilds = false
     maxRunningBuilds = 1
@@ -211,7 +187,7 @@ fun Project.deploy(platform: String, configureBuild: BuildType) = platform(platf
 
     steps {
         gradle {
-            name = "Deploy $platform Binaries"
+            name = "Deploy ${platform.buildTypeName()} Binaries"
             jdkHome = "%env.$jdk%"
             jvmArgs = "-Xmx1g"
             gradleParams = "--info --stacktrace -P$versionSuffixParameter=%$versionSuffixParameter% -P$releaseVersionParameter=%$releaseVersionParameter% -PbintrayApiKey=%bintray-key% -PbintrayUser=%bintray-user%"
@@ -221,53 +197,3 @@ fun Project.deploy(platform: String, configureBuild: BuildType) = platform(platf
         }
     }
 }.dependsOnSnapshot(configureBuild)
-
-fun Project.platform(platform: String, name: String, configure: BuildType.() -> Unit) = BuildType {
-    // ID is prepended with Project ID, so don't repeat it here
-    // ID should conform to identifier rules, so just letters, numbers and underscore
-    id("${name}_${platform.substringBefore(" ")}")
-    // Display name of the build configuration
-    this.name = "$name ($platform)"
-
-    requirements {
-        contains("teamcity.agent.jvm.os.name", platform)
-    }
-
-    params {
-        // This parameter is needed for macOS agent to be compatible
-        if (platform.startsWith("Mac")) param("env.JDK_17", "")
-    }
-
-    commonConfigure()
-    configure()
-}.also { buildType(it) }
-
-
-fun BuildType.commonConfigure() {
-    requirements {
-        noLessThan("teamcity.agent.hardware.memorySizeMb", "6144")
-    }
-
-    // Allow to fetch build status through API for badges
-    allowExternalStatus = true
-
-    // Configure VCS, by default use the same and only VCS root from which this configuration is fetched
-    vcs {
-        root(DslContext.settingsRoot)
-        showDependenciesChanges = true
-        checkoutMode = CheckoutMode.ON_AGENT
-    }
-
-    failureConditions {
-        errorMessage = true
-        nonZeroExitCode = true
-        executionTimeoutMin = 120
-    }
-
-    features {
-        feature {
-            id = "perfmon"
-            type = "perfmon"
-        }
-    }
-}

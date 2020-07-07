@@ -34,7 +34,8 @@ fun Project.configureTeamCityConfigGenerator(teamcity: TeamCityConfiguration) {
                 it
                     .replace("<artifactId>resource</artifactId>", "<artifactId>teamcity</artifactId>")
             }
-            copyResource(teamcityDir, "settings.kts") { text ->
+            copyResource(teamcityDir, "settings.kts")
+            copyResource(teamcityDir, "utils.kt") { text ->
                 val bintrayUser = teamcity.bintrayUser
                     ?: throw KotlinInfrastructureException("TeamCity configuration should specify `bintrayUser` parameter")
                 val bintrayToken = teamcity.bintrayToken
