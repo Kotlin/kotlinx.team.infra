@@ -1,11 +1,9 @@
 package kotlinx.team.infra
 
 import org.gradle.api.*
-import org.gradle.api.plugins.*
 import java.io.*
 
 class TeamCityConfiguration {
-    var projectName: String? = null
     var bintrayUser: String? = null
     var bintrayToken: String? = null
 
@@ -25,7 +23,6 @@ fun Project.configureTeamCityLogging() {
 }
 
 fun Project.configureTeamCityConfigGenerator(teamcity: TeamCityConfiguration) {
-    val project = this
     task<DefaultTask>("setupTeamCity") {
         group = "build setup"
         description = "Generates TeamCity project build configuration scripts"
@@ -38,15 +35,11 @@ fun Project.configureTeamCityConfigGenerator(teamcity: TeamCityConfiguration) {
                     .replace("<artifactId>resource</artifactId>", "<artifactId>teamcity</artifactId>")
             }
             copyResource(teamcityDir, "settings.kts") { text ->
-                val projectName = teamcity.projectName ?: project.name.removeSuffix("-package")
-                val projectVersion = project.version.toString()
                 val bintrayUser = teamcity.bintrayUser
                     ?: throw KotlinInfrastructureException("TeamCity configuration should specify `bintrayUser` parameter")
                 val bintrayToken = teamcity.bintrayToken
                     ?: throw KotlinInfrastructureException("TeamCity configuration should specify `bintrayToken` parameter")
                 text
-                    .replace("<<PROJECT_VERSION>>", projectVersion)
-                    .replace("<<PROJECT_NAME>>", projectName)
                     .replace("<<BINTRAY_USER>>", bintrayUser)
                     .replace("<<BINTRAY_TOKEN>>", bintrayToken)
                     .replace("<<JDK>>", teamcity.jdk)
@@ -55,13 +48,16 @@ fun Project.configureTeamCityConfigGenerator(teamcity: TeamCityConfiguration) {
     }
 }
 
-private inline fun copyResource(teamcityDir: File, file: String, transform: (String) -> String = { it }) {
+private inline fun copyResource(teamcityDir: File, file: String, override: Boolean = true, transform: (String) -> String = { it }) {
     val resource = InfraPlugin::class.java.getResourceAsStream("/teamcity/$file")
         ?: throw KotlinInfrastructureException("Cannot find resource for teamcity file $file")
+    val destinationFile = teamcityDir.resolve(file)
+
+    if (!override && destinationFile.exists()) return
 
     resource.bufferedReader().use { input ->
         val text = input.readText().let(transform)
-        teamcityDir.resolve(file).writeText(text)
+        destinationFile.writeText(text)
     }
 }
 
