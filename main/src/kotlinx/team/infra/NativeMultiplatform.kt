@@ -27,9 +27,9 @@ fun Project.configureNativeMultiplatform() {
             }
 
             val extension: Any = if (ideaActive)
-                NativeIdeaInfraExtension(subproject, kotlin)
+                NativeIdeaInfraExtension(subproject, kotlin, "native")
             else
-                NativeBuildInfraExtension(subproject, kotlin)
+                NativeBuildInfraExtension(subproject, kotlin, "native")
 
             (kotlin as ExtensionAware).extensions.add("infra", extension)
         }
@@ -38,8 +38,12 @@ fun Project.configureNativeMultiplatform() {
 
 abstract class NativeInfraExtension(
     protected val project: Project,
-    protected val kotlin: KotlinMultiplatformExtension
+    protected val kotlin: KotlinMultiplatformExtension,
+    protected val sourceSetName: String
 ) {
+    protected val mainSourceSet = kotlin.sourceSets.maybeCreate("${sourceSetName}Main")
+    protected val testSourceSet = kotlin.sourceSets.maybeCreate("${sourceSetName}Test")
+
     protected val sharedConfigs = mutableListOf<KotlinNativeTarget.() -> Unit>()
     fun shared(configure: Closure<*>) = shared { ConfigureUtil.configure(configure, this) }
     fun shared(configure: KotlinNativeTarget.() -> Unit) {
@@ -49,10 +53,13 @@ abstract class NativeInfraExtension(
     fun target(name: String) = target(name) { }
     fun target(name: String, configure: Closure<*>) = target(name) { ConfigureUtil.configure(configure, this) }
     abstract fun target(name: String, configure: KotlinNativeTarget.() -> Unit)
+
+    fun common(name: String, configure: Closure<*>) = common(name) { ConfigureUtil.configure(configure, this) }
+    abstract fun common(name: String, configure: NativeInfraExtension.() -> Unit)
 }
 
-class NativeIdeaInfraExtension(project: Project, kotlin: KotlinMultiplatformExtension) :
-    NativeInfraExtension(project, kotlin) {
+class NativeIdeaInfraExtension(project: Project, kotlin: KotlinMultiplatformExtension, sourceSetName: String) :
+    NativeInfraExtension(project, kotlin, sourceSetName) {
 
     private val hostManager = createHostManager()
 
@@ -74,26 +81,30 @@ class NativeIdeaInfraExtension(project: Project, kotlin: KotlinMultiplatformExte
         if (name != hostPreset.name)
             return
 
-        kotlin.targetFromPreset(hostPreset, "native") {
+        kotlin.targetFromPreset(hostPreset, sourceSetName) {
             configure()
             sharedConfigs.forEach { it() }
         }
 
         project.afterEvaluate {
-            kotlin.sourceSets.getByName("nativeMain") { sourceSet ->
+            kotlin.sourceSets.getByName("${sourceSetName}Main") { sourceSet ->
                 sourceSet.kotlin.srcDir("${hostPreset.name}Main/src")
             }
         }
     }
+
+    override fun common(name: String, configure: NativeInfraExtension.() -> Unit) {
+        kotlin.sourceSets.create("${name}Main").dependsOn(mainSourceSet)
+        kotlin.sourceSets.create("${name}Test").dependsOn(testSourceSet)
+        val extension = NativeIdeaInfraExtension(project, kotlin, name)
+        extension.configure()
+    }
 }
 
-class NativeBuildInfraExtension(project: Project, kotlin: KotlinMultiplatformExtension) :
-    NativeInfraExtension(project, kotlin) {
+class NativeBuildInfraExtension(project: Project, kotlin: KotlinMultiplatformExtension, sourceSetName: String) :
+    NativeInfraExtension(project, kotlin, sourceSetName) {
 
     private val nativePresets = kotlin.presets.filterIsInstance<AbstractKotlinNativeTargetPreset<*>>()
-
-    private val nativeMain = kotlin.sourceSets.create("nativeMain")
-    private val nativeTest = kotlin.sourceSets.create("nativeTest")
 
     init {
         project.logger.infra("Configuring native targets for $project for build")
@@ -102,7 +113,7 @@ class NativeBuildInfraExtension(project: Project, kotlin: KotlinMultiplatformExt
 
     override fun target(name: String, configure: KotlinNativeTarget.() -> Unit) {
         val preset = nativePresets.singleOrNull { it.name == name } ?: return
-        project.logger.infra("Creating target '${preset.name}' with dependency on 'native'")
+        project.logger.infra("Creating target '${preset.name}' with dependency on '$sourceSetName'")
 
         val target = kotlin.targetFromPreset(preset) {
             configure()
@@ -110,11 +121,18 @@ class NativeBuildInfraExtension(project: Project, kotlin: KotlinMultiplatformExt
         }
 
         kotlin.sourceSets.getByName("${preset.name}Main") { sourceSet ->
-            sourceSet.dependsOn(nativeMain)
+            sourceSet.dependsOn(mainSourceSet)
         }
         kotlin.sourceSets.getByName("${preset.name}Test") { sourceSet ->
-            sourceSet.dependsOn(nativeTest)
+            sourceSet.dependsOn(testSourceSet)
         }
+    }
+
+    override fun common(name: String, configure: NativeInfraExtension.() -> Unit) {
+        kotlin.sourceSets.create("${name}Main").dependsOn(mainSourceSet)
+        kotlin.sourceSets.create("${name}Test").dependsOn(testSourceSet)
+        val extension = NativeBuildInfraExtension(project, kotlin, name)
+        extension.configure()
     }
 }
 
