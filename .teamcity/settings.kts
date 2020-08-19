@@ -26,7 +26,7 @@ To debug in IntelliJ Idea, open the 'Maven Projects' tool window (View
 
 version = "2020.1"
 val versionParameter = "releaseVersion"
-val publishVersion = "0.1.0"
+val publishVersion = "0.2.0"
 
 project {
     // Disable editing of project and build settings from the UI to avoid issues with TeamCity
