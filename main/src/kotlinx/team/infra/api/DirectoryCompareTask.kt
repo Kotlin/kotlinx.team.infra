@@ -20,6 +20,7 @@ open class DirectoryCompareTask : DefaultTask() {
     @Optional
     val dummyOutputFile: File? = null
 
+    @Input
     var subject: String = "Directory comparison"
 
     @TaskAction
