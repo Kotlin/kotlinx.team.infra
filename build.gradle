@@ -23,10 +23,7 @@ if (Files.exists(Paths.get("$project.rootDir/local.properties"))) {
 
 repositories {
     mavenCentral()
-    jcenter()
     gradlePluginPortal()
-    maven { url 'https://dl.bintray.com/kotlin/kotlin-eap' }
-    maven { url 'https://dl.bintray.com/kotlin/kotlin-dev' }
 }
 
 gradlePlugin {
