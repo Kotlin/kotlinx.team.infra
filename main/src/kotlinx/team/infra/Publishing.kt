@@ -255,7 +255,7 @@ private fun Project.createVersionPrepareTask(publishing: PublishingConfiguration
     return task<DefaultTask>("publishPrepareVersion") {
         group = PublishingPlugin.PUBLISH_TASK_GROUP
         doFirst {
-            val ext = extensions.getByType(ExtraPropertiesExtension::class.java)
+            val ext = project.extensions.getByType(ExtraPropertiesExtension::class.java)
             if (publishing.sonatype.isSelected && ext.get("infra.release") != true) {
                 throw KotlinInfrastructureException("Cannot publish development version to Sonatype.")
             }
