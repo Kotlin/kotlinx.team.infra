@@ -46,6 +46,7 @@ project {
 
     val deployVersion = deployVersion().apply {
         dependsOnSnapshot(buildAll, onFailure = FailureAction.IGNORE)
+        dependsOnSnapshot(BUILD_CREATE_STAGING_REPO_ABSOLUTE_ID)
     }
     val deploys = platforms.map { deploy(it, deployVersion) }
     val deployPublish = deployPublish(deployVersion).apply {
@@ -139,6 +140,8 @@ fun Project.deployVersion() = BuildType {
         param("bintray-user", bintrayUserName)
         password("bintray-key", bintrayToken)
         param(versionSuffixParameter, "dev-%build.counter%")
+        param("reverse.dep.$BUILD_CREATE_STAGING_REPO_ABSOLUTE_ID.system.libs.repo.description", libraryStagingRepoDescription)
+        param("env.libs.repository.id", "%dep.$BUILD_CREATE_STAGING_REPO_ABSOLUTE_ID.env.libs.repository.id%")
     }
 
     requirements {
@@ -149,7 +152,7 @@ fun Project.deployVersion() = BuildType {
     steps {
         gradle {
             name = "Verify Gradle Configuration"
-            tasks = "clean publishBintrayCreateVersion"
+            tasks = "clean publishPrepareVersion"
             gradleParams = "--info --stacktrace -P$versionSuffixParameter=%$versionSuffixParameter% -P$releaseVersionParameter=%$releaseVersionParameter% -PbintrayApiKey=%bintray-key% -PbintrayUser=%bintray-user%"
             buildFile = ""
             jdkHome = "%env.$jdk%"
@@ -167,6 +170,7 @@ fun Project.deployPublish(configureBuild: BuildType) = BuildType {
         // Tell configuration build how to get release version parameter from this build
         // "dev" is the default and means publishing is not releasing to public
         text(configureBuild.reverseDepParamRefs[releaseVersionParameter].name, "dev", display = ParameterDisplay.PROMPT, label = "Release Version")
+        param("env.libs.repository.id", "%dep.$BUILD_CREATE_STAGING_REPO_ABSOLUTE_ID.env.libs.repository.id%")
     }
     commonConfigure()
 }.also { buildType(it) }

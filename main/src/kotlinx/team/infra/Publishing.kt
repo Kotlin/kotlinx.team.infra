@@ -4,10 +4,15 @@ import groovy.lang.*
 import org.gradle.api.*
 import org.gradle.api.plugins.*
 import org.gradle.api.publish.*
+import org.gradle.api.publish.maven.MavenPom
+import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.publish.maven.plugins.*
 import org.gradle.api.publish.maven.tasks.*
 import org.gradle.api.publish.plugins.*
 import org.gradle.api.tasks.*
+import org.gradle.jvm.tasks.Jar
+import org.gradle.plugins.signing.SigningExtension
+import org.gradle.plugins.signing.SigningPlugin
 import org.gradle.util.*
 import java.net.*
 import java.text.*
@@ -15,6 +20,14 @@ import java.util.*
 
 @Suppress("DEPRECATION")
 open class PublishingConfiguration {
+    var libraryRepoUrl: String? = null
+
+    val sonatype = SonatypeConfiguration()
+    fun sonatype(configure: Action<SonatypeConfiguration>) {
+        configure.execute(sonatype)
+        sonatype.isSelected = true
+    }
+
     @Deprecated("Avoid publishing to bintray")
     val bintray = BintrayConfiguration()
     @Deprecated("Avoid publishing to bintray")
@@ -45,7 +58,11 @@ open class PublishingConfiguration {
     }
 }
 
-// TODO: Add sonatype configuration
+class SonatypeConfiguration {
+    // no things to configure here for now
+    internal var isSelected: Boolean = false
+}
+
 // TODO: Add space configuration
 
 // TODO: Remove all bintray-related configuration after migration
@@ -81,7 +98,7 @@ fun Project.configureProjectVersion() {
 }
 
 @Suppress("DEPRECATION")
-fun Project.configurePublishing(publishing: PublishingConfiguration) {
+internal fun Project.configurePublishing(publishing: PublishingConfiguration) {
     val ext = extensions.getByType(ExtraPropertiesExtension::class.java)
     
     val buildLocal = "buildLocal"
@@ -96,19 +113,34 @@ fun Project.configurePublishing(publishing: PublishingConfiguration) {
     includeProjects.forEach { subproject ->
         subproject.applyMavenPublish()
         subproject.createBuildRepository(buildLocal, rootBuildLocal)
+        subproject.configurePublications(publishing)
     }
 
-    // If bintray is configured, create version task and configure subprojects
-    val bintray = if (ext.get("infra.release") == true)
-        publishing.bintray
-    else 
-        publishing.bintrayDev ?: publishing.bintray
-    
-    val enableBintray = verifyBintrayConfiguration(bintray)
-    if (enableBintray) {
-        createBintrayVersionTask(bintray)
-        includeProjects.forEach { subproject ->
-            subproject.createBintrayRepository(bintray)
+    createVersionPrepareTask()
+
+    if (publishing.sonatype.isSelected) {
+        if (verifySonatypeConfiguration()) {
+            if (ext.get("infra.release") != true) {
+                throw KotlinInfrastructureException("Cannot publish development version to Sonatype.")
+            }
+            includeProjects.forEach { subproject ->
+                subproject.createSonatypeRepository()
+                subproject.configureSigning()
+            }
+        }
+    } else {
+        // If bintray is configured, create version task and configure subprojects
+        val bintray = if (ext.get("infra.release") == true)
+            publishing.bintray
+        else
+            publishing.bintrayDev ?: publishing.bintray
+
+        val enableBintray = verifyBintrayConfiguration(bintray)
+        if (enableBintray) {
+            createBintrayVersionTask(bintray)
+            includeProjects.forEach { subproject ->
+                subproject.createBintrayRepository(bintray)
+            }
         }
     }
 
@@ -194,7 +226,7 @@ private fun Project.verifyBintrayConfiguration(bintray: BintrayConfiguration): B
     return true
 }
 
-fun Project.createBintrayRepository(bintray: BintrayConfiguration) {
+private fun Project.createBintrayRepository(bintray: BintrayConfiguration) {
     val username = bintray.username
         ?: throw KotlinInfrastructureException("Cannot create version. User has not been specified.")
     val password = bintray.password
@@ -222,8 +254,14 @@ private fun BintrayConfiguration.api(section: String): String {
     return "https://api.bintray.com/$section/$organization/$repository/$library"
 }
 
-fun Project.createBintrayVersionTask(bintray: BintrayConfiguration) {
-    task<DefaultTask>("publishBintrayCreateVersion") {
+private fun Project.createVersionPrepareTask(): TaskProvider<DefaultTask> {
+    return task<DefaultTask>("publishPrepareVersion") {
+        group = PublishingPlugin.PUBLISH_TASK_GROUP
+    }
+}
+
+private fun Project.createBintrayVersionTask(bintray: BintrayConfiguration) {
+    val bintrayCreateVersion = task<DefaultTask>("publishBintrayCreateVersion") {
         group = PublishingPlugin.PUBLISH_TASK_GROUP
         doFirst {
             val username = bintray.username
@@ -265,4 +303,131 @@ fun Project.createBintrayVersionTask(bintray: BintrayConfiguration) {
             }
         }
     }
+    tasks.named("publishPrepareVersion").configure {
+        it.dependsOn(bintrayCreateVersion)
+    }
 }
+
+
+private fun Project.verifySonatypeConfiguration(): Boolean {
+    fun missing(what: String): Boolean {
+        logger.warn("INFRA: Sonatype publishing will not be possible due to missing $what.")
+        return false
+    }
+
+    sonatypeUsername ?: return missing("username")
+    val password = sonatypePassword ?: return missing("password")
+    if (password.startsWith("credentialsJSON")) {
+        logger.warn("INFRA: API key secure token was not expanded, publishing is not possible.")
+        return false
+    }
+
+    if (password.trim() != password) {
+        logger.warn("INFRA: API key secure token was expanded to a value with whitespace around it.")
+    }
+
+    if (password.trim().isEmpty()) {
+        logger.warn("INFRA: API key secure token was expanded to empty string.")
+    }
+    return true
+}
+
+private fun Project.createSonatypeRepository() {
+    val username = project.sonatypeUsername
+        ?: throw KotlinInfrastructureException("Cannot setup publication. User has not been specified.")
+    val password =  project.sonatypePassword
+        ?: throw KotlinInfrastructureException("Cannot setup publication. Password (API key) has not been specified.")
+
+    extensions.configure(PublishingExtension::class.java) { publishing ->
+        publishing.repositories.maven { repo ->
+            repo.name = "sonatype"
+            repo.url = sonatypeRepositoryUri()
+            repo.credentials { credentials ->
+                credentials.username = username
+                credentials.password = password.trim()
+            }
+        }
+    }
+}
+
+private fun Project.configurePublications(publishing: PublishingConfiguration) {
+    if (publishing.libraryRepoUrl.isNullOrEmpty()) {
+        logger.warn("INFRA: library source control repository URL is not set, publication won't be accepted by Sonatype.")
+    }
+    val javadocJar = tasks.create("javadocJar", Jar::class.java).apply {
+        archiveClassifier.set("javadoc")
+    }
+    extensions.configure(PublishingExtension::class.java) { publishingExtension ->
+        publishingExtension.publications.all {
+            with(it as MavenPublication) {
+                artifact(javadocJar)
+                configureRequiredPomAttributes(project, publishing)
+            }
+        }
+    }
+}
+
+fun Project.mavenPublicationsPom(action: Action<MavenPom>) {
+    extensions.configure(PublishingExtension::class.java) { publishingExtension ->
+        publishingExtension.publications.all {
+            action.execute((it as MavenPublication).pom)
+        }
+    }
+}
+
+private fun MavenPublication.configureRequiredPomAttributes(project: Project, publishing: PublishingConfiguration) {
+    val publication = this
+    // TODO: get rid of 'it's
+    pom {
+        it.name.set(publication.artifactId)
+        it.description.set(project.description ?: publication.artifactId)
+        it.url.set(publishing.libraryRepoUrl)
+        it.licenses {
+            it.license {
+                it.name.set("The Apache License, Version 2.0")
+                it.url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+            }
+        }
+        it.scm {
+            it.url.set(publishing.libraryRepoUrl)
+        }
+        it.developers {
+            it.developer {
+                it.name.set("JetBrains Team")
+                it.organization.set("JetBrains")
+                it.organizationUrl.set("https://www.jetbrains.com")
+            }
+        }
+    }
+}
+
+private fun Project.configureSigning() {
+    project.pluginManager.apply(SigningPlugin::class.java)
+    val keyId = project.propertyOrEnv("libs.sign.key.id")
+    val signingKey = project.propertyOrEnv("libs.sign.key.private")
+    val signingKeyPassphrase = project.propertyOrEnv("libs.sign.passphrase")
+
+    if (keyId != null) {
+        project.extensions.configure<SigningExtension>("signing") {
+            it.useInMemoryPgpKeys(keyId, signingKey, signingKeyPassphrase)
+            it.sign(extensions.getByType(PublishingExtension::class.java).publications) // all publications
+        }
+    } else {
+        logger.warn("INFRA: signing key id is not specified, artifact signing is not enabled.")
+    }
+}
+
+
+private fun Project.sonatypeRepositoryUri(): URI {
+    val repositoryId: String? = System.getenv("libs.repository.id")
+    return if (repositoryId == null) {
+        // Using implicitly created staging, for MPP it's likely a mistake
+        logger.warn("INFRA: using an implicitly created staging for ${project.rootProject.name}")
+        URI("https://oss.sonatype.org/service/local/staging/deploy/maven2/")
+    } else {
+        URI("https://oss.sonatype.org/service/local/staging/deployByRepositoryId/$repositoryId")
+    }
+}
+
+private val Project.sonatypeUsername: String? get() = propertyOrEnv("libs.sonatype.user")
+private val Project.sonatypePassword: String? get() = propertyOrEnv("libs.sonatype.password")

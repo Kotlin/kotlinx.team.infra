@@ -57,3 +57,5 @@ fun Logger.infra(message: String) {
     info("INFRA: $message")
 }
 
+fun Project.propertyOrEnv(name: String): String? =
+    findProperty(name) as? String ?: System.getenv(name)
