@@ -10,8 +10,8 @@ import java.util.*
 
 @Suppress("unused")
 class InfraPlugin : Plugin<Project> {
-    private val requiredGradleVersion = "5.1"
-    private val requiredKotlinVersion = "1.3.40"
+    private val requiredGradleVersion = "6.0"
+    private val requiredKotlinVersion = "1.4.0"
     private val INFRA_EXTENSION_NAME = "infra"
 
     override fun apply(target: Project) = target.run {
