@@ -4,7 +4,9 @@ import org.gradle.api.*
 import java.io.*
 
 class TeamCityConfiguration {
+    @Deprecated("Avoid publishing to bintray")
     var bintrayUser: String? = null
+    @Deprecated("Avoid publishing to bintray")
     var bintrayToken: String? = null
 
     var jdk = "JDK_18_x64"
@@ -34,11 +36,12 @@ fun Project.configureTeamCityConfigGenerator(teamcity: TeamCityConfiguration) {
                 it
                     .replace("<artifactId>resource</artifactId>", "<artifactId>teamcity</artifactId>")
             }
+            @Suppress("DEPRECATION")
             copyResource(teamcityDir, "utils.kt") { text ->
                 val bintrayUser = teamcity.bintrayUser
-                    ?: throw KotlinInfrastructureException("TeamCity configuration should specify `bintrayUser` parameter")
+                    ?: "%env.BINTRAY_USER%" //throw KotlinInfrastructureException("TeamCity configuration should specify `bintrayUser` parameter")
                 val bintrayToken = teamcity.bintrayToken
-                    ?: throw KotlinInfrastructureException("TeamCity configuration should specify `bintrayToken` parameter")
+                    ?: "%env.BINTRAY_API_KEY%" //throw KotlinInfrastructureException("TeamCity configuration should specify `bintrayToken` parameter")
                 text
                     .replace("<<BINTRAY_USER>>", bintrayUser)
                     .replace("<<BINTRAY_TOKEN>>", bintrayToken)

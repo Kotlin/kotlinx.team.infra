@@ -13,20 +13,27 @@ import java.net.*
 import java.text.*
 import java.util.*
 
+@Suppress("DEPRECATION")
 open class PublishingConfiguration {
+    @Deprecated("Avoid publishing to bintray")
     val bintray = BintrayConfiguration()
+    @Deprecated("Avoid publishing to bintray")
     fun bintray(configure: Action<BintrayConfiguration>) {
         configure.execute(bintray)
     }
+    @Deprecated("Avoid publishing to bintray")
     fun bintray(configureClosure: Closure<BintrayConfiguration>) {
         ConfigureUtil.configureSelf(configureClosure, bintray)
     }
 
+    @Deprecated("Avoid publishing to bintray")
     var bintrayDev: BintrayConfiguration? = null
+    @Deprecated("Avoid publishing to bintray")
     fun bintrayDev(configure: Action<BintrayConfiguration>) {
         if (bintrayDev == null) bintrayDev = BintrayConfiguration()
         configure.execute(bintrayDev)
     }
+    @Deprecated("Avoid publishing to bintray")
     fun bintrayDev(configureClosure: Closure<BintrayConfiguration>) {
         if (bintrayDev == null) bintrayDev = BintrayConfiguration()
         ConfigureUtil.configureSelf(configureClosure, bintrayDev)
@@ -38,6 +45,10 @@ open class PublishingConfiguration {
     }
 }
 
+// TODO: Add sonatype configuration
+// TODO: Add space configuration
+
+// TODO: Remove all bintray-related configuration after migration
 open class BintrayConfiguration {
     var username: String? = null
     var password: String? = null
@@ -69,6 +80,7 @@ fun Project.configureProjectVersion() {
     logger.infra("Configured root project version as '${project.version}'")
 }
 
+@Suppress("DEPRECATION")
 fun Project.configurePublishing(publishing: PublishingConfiguration) {
     val ext = extensions.getByType(ExtraPropertiesExtension::class.java)
     
