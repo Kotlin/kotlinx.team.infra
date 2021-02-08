@@ -116,13 +116,10 @@ internal fun Project.configurePublishing(publishing: PublishingConfiguration) {
         subproject.configurePublications(publishing)
     }
 
-    createVersionPrepareTask()
+    createVersionPrepareTask(publishing)
 
     if (publishing.sonatype.isSelected) {
         if (verifySonatypeConfiguration()) {
-            if (ext.get("infra.release") != true) {
-                throw KotlinInfrastructureException("Cannot publish development version to Sonatype.")
-            }
             includeProjects.forEach { subproject ->
                 subproject.createSonatypeRepository()
                 subproject.configureSigning()
@@ -254,9 +251,15 @@ private fun BintrayConfiguration.api(section: String): String {
     return "https://api.bintray.com/$section/$organization/$repository/$library"
 }
 
-private fun Project.createVersionPrepareTask(): TaskProvider<DefaultTask> {
+private fun Project.createVersionPrepareTask(publishing: PublishingConfiguration): TaskProvider<DefaultTask> {
     return task<DefaultTask>("publishPrepareVersion") {
         group = PublishingPlugin.PUBLISH_TASK_GROUP
+        doFirst {
+            val ext = extensions.getByType(ExtraPropertiesExtension::class.java)
+            if (publishing.sonatype.isSelected && ext.get("infra.release") != true) {
+                throw KotlinInfrastructureException("Cannot publish development version to Sonatype.")
+            }
+        }
     }
 }
 
