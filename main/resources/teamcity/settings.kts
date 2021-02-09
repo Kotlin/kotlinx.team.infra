@@ -46,12 +46,16 @@ project {
 
     val deployVersion = deployVersion().apply {
         dependsOnSnapshot(buildAll, onFailure = FailureAction.IGNORE)
-        dependsOnSnapshot(BUILD_CREATE_STAGING_REPO_ABSOLUTE_ID)
+        dependsOnSnapshot(BUILD_CREATE_STAGING_REPO_ABSOLUTE_ID) {
+            reuseBuilds = ReuseBuilds.NO
+        }
     }
     val deploys = platforms.map { deploy(it, deployVersion) }
     val deployPublish = deployPublish(deployVersion).apply {
         dependsOnSnapshot(buildAll, onFailure = FailureAction.IGNORE)
-        dependsOnSnapshot(BUILD_CREATE_STAGING_REPO_ABSOLUTE_ID)
+        dependsOnSnapshot(BUILD_CREATE_STAGING_REPO_ABSOLUTE_ID) {
+            reuseBuilds = ReuseBuilds.NO
+        }
         deploys.forEach {
             dependsOnSnapshot(it)
         }
