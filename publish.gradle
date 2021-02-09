@@ -4,7 +4,7 @@ project.version = project.hasProperty('releaseVersion') ? project.property('rele
 
 task sourceJar(type: Jar) {
     classifier 'sources'
-    from sourceSets.main.allJava
+    from sourceSets.main.allJava.sourceDirectories
 }
 
 publishing {
