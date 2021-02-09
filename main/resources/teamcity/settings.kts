@@ -51,6 +51,7 @@ project {
     val deploys = platforms.map { deploy(it, deployVersion) }
     val deployPublish = deployPublish(deployVersion).apply {
         dependsOnSnapshot(buildAll, onFailure = FailureAction.IGNORE)
+        dependsOnSnapshot(BUILD_CREATE_STAGING_REPO_ABSOLUTE_ID)
         deploys.forEach {
             dependsOnSnapshot(it)
         }
@@ -185,6 +186,7 @@ fun Project.deploy(platform: Platform, configureBuild: BuildType) = buildType("D
         param(releaseVersionParameter, "${configureBuild.depParamRefs[releaseVersionParameter]}")
         param("bintray-user", bintrayUserName)
         password("bintray-key", bintrayToken)
+        param("env.libs.repository.id", "%dep.$BUILD_CREATE_STAGING_REPO_ABSOLUTE_ID.env.libs.repository.id%")
     }
 
     vcs {

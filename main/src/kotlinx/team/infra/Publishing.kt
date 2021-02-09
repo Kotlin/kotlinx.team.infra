@@ -60,6 +60,11 @@ open class PublishingConfiguration {
 
 class SonatypeConfiguration {
     // no things to configure here for now
+    // all information is provided with properties or env. variables with known names:
+    // - libs.repository.id: sonatype staging repository id, 'auto' to open staging implicitly,
+    // - libs.sonatype.user: sonatype user name
+    // - libs.sonatype.password: sonatype password
+    // - libs.sign.key.id, libs.sign.key.private, libs.sign.passphrase: publication signing information
     internal var isSelected: Boolean = false
 }
 
@@ -318,8 +323,13 @@ private fun Project.verifySonatypeConfiguration(): Boolean {
         return false
     }
 
+    if (stagingRepositoryId.isNullOrEmpty()) {
+        return missing("staging repository id 'libs.repository.id'. Pass 'auto' for implicit staging")
+    }
+
     sonatypeUsername ?: return missing("username")
     val password = sonatypePassword ?: return missing("password")
+
     if (password.startsWith("credentialsJSON")) {
         logger.warn("INFRA: API key secure token was not expanded, publishing is not possible.")
         return false
@@ -422,15 +432,21 @@ private fun Project.configureSigning() {
 
 
 private fun Project.sonatypeRepositoryUri(): URI {
-    val repositoryId: String? = System.getenv("libs.repository.id")
-    return if (repositoryId == null) {
-        // Using implicitly created staging, for MPP it's likely a mistake
-        logger.warn("INFRA: using an implicitly created staging for ${project.rootProject.name}")
-        URI("https://oss.sonatype.org/service/local/staging/deploy/maven2/")
-    } else {
-        URI("https://oss.sonatype.org/service/local/staging/deployByRepositoryId/$repositoryId")
+    val repositoryId: String? = stagingRepositoryId
+    return when {
+        repositoryId.isNullOrEmpty() ->
+            throw KotlinInfrastructureException("Staging repository id 'libs.repository.id' is not specified.")
+        repositoryId == "auto" -> {
+            // Using implicitly created staging, for MPP it's likely a mistake
+            logger.warn("INFRA: using an implicitly created staging for ${project.rootProject.name}")
+            URI("https://oss.sonatype.org/service/local/staging/deploy/maven2/")
+        }
+        else -> {
+            URI("https://oss.sonatype.org/service/local/staging/deployByRepositoryId/$repositoryId")
+        }
     }
 }
 
+private val Project.stagingRepositoryId: String? get() = propertyOrEnv("libs.repository.id")
 private val Project.sonatypeUsername: String? get() = propertyOrEnv("libs.sonatype.user")
 private val Project.sonatypePassword: String? get() = propertyOrEnv("libs.sonatype.password")
