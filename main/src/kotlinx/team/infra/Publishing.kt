@@ -2,6 +2,7 @@ package kotlinx.team.infra
 
 import groovy.lang.*
 import org.gradle.api.*
+import org.gradle.api.model.ObjectFactory
 import org.gradle.api.plugins.*
 import org.gradle.api.publish.*
 import org.gradle.api.publish.maven.MavenPom
@@ -17,12 +18,13 @@ import org.gradle.util.*
 import java.net.*
 import java.text.*
 import java.util.*
+import javax.inject.Inject
 
 @Suppress("DEPRECATION")
-open class PublishingConfiguration {
+open class PublishingConfiguration @Inject constructor(val objects: ObjectFactory) {
     var libraryRepoUrl: String? = null
 
-    val sonatype = SonatypeConfiguration()
+    val sonatype = objects.newInstance<SonatypeConfiguration>()
     fun sonatype(configure: Action<SonatypeConfiguration>) {
         configure.execute(sonatype)
         sonatype.isSelected = true
@@ -58,7 +60,7 @@ open class PublishingConfiguration {
     }
 }
 
-class SonatypeConfiguration {
+open class SonatypeConfiguration {
     // no things to configure here for now
     // all information is provided with properties or env. variables with known names:
     // - libs.repository.id: sonatype staging repository id, 'auto' to open staging implicitly,
@@ -66,6 +68,8 @@ class SonatypeConfiguration {
     // - libs.sonatype.password: sonatype password
     // - libs.sign.key.id, libs.sign.key.private, libs.sign.passphrase: publication signing information
     internal var isSelected: Boolean = false
+
+    public var testProperty: String = "default"
 }
 
 // TODO: Add space configuration

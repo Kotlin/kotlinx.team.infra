@@ -4,7 +4,7 @@ import kotlinx.team.infra.api.*
 import org.gradle.api.*
 
 open class InfraExtension(val project: Project) {
-    val publishing = PublishingConfiguration()
+    val publishing = project.objects.newInstance<PublishingConfiguration>()
     private var publishingHandler: ((PublishingConfiguration) -> Unit)? = null
     internal fun afterPublishing(handler: (PublishingConfiguration) -> Unit) {
         publishingHandler = handler
@@ -15,7 +15,7 @@ open class InfraExtension(val project: Project) {
         publishingHandler?.invoke(publishing)
     }
 
-    val teamcity = TeamCityConfiguration()
+    val teamcity = project.objects.newInstance<TeamCityConfiguration>()
     private var teamcityHandler: ((TeamCityConfiguration) -> Unit)? = null
     internal fun afterTeamCity(handler: (TeamCityConfiguration) -> Unit) {
         teamcityHandler = handler
@@ -26,7 +26,7 @@ open class InfraExtension(val project: Project) {
         teamcityHandler?.invoke(teamcity)
     }
 
-    val apiCheck = ApiCheckConfiguration()
+    val apiCheck = project.objects.newInstance<ApiCheckConfiguration>()
     private var apiCheckHandler: ((ApiCheckConfiguration) -> Unit)? = null
     internal fun afterApiCheck(handler: (ApiCheckConfiguration) -> Unit) {
         apiCheckHandler = handler

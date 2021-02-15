@@ -3,6 +3,7 @@ package kotlinx.team.infra
 import groovy.lang.*
 import org.gradle.api.*
 import org.gradle.api.logging.*
+import org.gradle.api.model.ObjectFactory
 import org.gradle.api.tasks.*
 import java.io.*
 
@@ -59,3 +60,5 @@ fun Logger.infra(message: String) {
 
 fun Project.propertyOrEnv(name: String): String? =
     findProperty(name) as? String ?: System.getenv(name)
+
+internal inline fun <reified T: Any> ObjectFactory.newInstance(): T = newInstance(T::class.java)

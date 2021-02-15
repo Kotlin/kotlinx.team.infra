@@ -3,7 +3,7 @@ package kotlinx.team.infra
 import org.gradle.api.*
 import java.io.*
 
-class TeamCityConfiguration {
+open class TeamCityConfiguration {
     var libraryStagingRepoDescription: String? = null
 
     @Deprecated("Avoid publishing to bintray")

@@ -9,7 +9,7 @@ import org.gradle.api.tasks.*
 import org.jetbrains.kotlin.gradle.dsl.*
 import org.jetbrains.kotlin.gradle.plugin.*
 
-class ApiCheckConfiguration {
+open class ApiCheckConfiguration {
     var includeProjects: MutableList<String> = mutableListOf()
     fun include(vararg name: String) {
         includeProjects.addAll(name)
