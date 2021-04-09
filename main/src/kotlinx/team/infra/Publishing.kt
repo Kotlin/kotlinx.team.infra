@@ -20,7 +20,6 @@ import java.text.*
 import java.util.*
 import javax.inject.Inject
 
-@Suppress("DEPRECATION")
 open class PublishingConfiguration @Inject constructor(val objects: ObjectFactory) {
     var libraryRepoUrl: String? = null
 
@@ -28,30 +27,6 @@ open class PublishingConfiguration @Inject constructor(val objects: ObjectFactor
     fun sonatype(configure: Action<SonatypeConfiguration>) {
         configure.execute(sonatype)
         sonatype.isSelected = true
-    }
-
-    @Deprecated("Avoid publishing to bintray")
-    val bintray = BintrayConfiguration()
-    @Deprecated("Avoid publishing to bintray")
-    fun bintray(configure: Action<BintrayConfiguration>) {
-        configure.execute(bintray)
-    }
-    @Deprecated("Avoid publishing to bintray")
-    fun bintray(configureClosure: Closure<BintrayConfiguration>) {
-        ConfigureUtil.configureSelf(configureClosure, bintray)
-    }
-
-    @Deprecated("Avoid publishing to bintray")
-    var bintrayDev: BintrayConfiguration? = null
-    @Deprecated("Avoid publishing to bintray")
-    fun bintrayDev(configure: Action<BintrayConfiguration>) {
-        if (bintrayDev == null) bintrayDev = BintrayConfiguration()
-        configure.execute(bintrayDev)
-    }
-    @Deprecated("Avoid publishing to bintray")
-    fun bintrayDev(configureClosure: Closure<BintrayConfiguration>) {
-        if (bintrayDev == null) bintrayDev = BintrayConfiguration()
-        ConfigureUtil.configureSelf(configureClosure, bintrayDev)
     }
 
     var includeProjects: MutableList<String> = mutableListOf()
@@ -74,17 +49,6 @@ open class SonatypeConfiguration {
 
 // TODO: Add space configuration
 
-// TODO: Remove all bintray-related configuration after migration
-open class BintrayConfiguration {
-    var username: String? = null
-    var password: String? = null
-
-    var organization: String? = null
-    var repository: String? = null
-    var library: String? = null
-
-    var publish: Boolean = false
-}
 
 fun Project.configureProjectVersion() {
     val ext = extensions.getByType(ExtraPropertiesExtension::class.java)
@@ -106,10 +70,7 @@ fun Project.configureProjectVersion() {
     logger.infra("Configured root project version as '${project.version}'")
 }
 
-@Suppress("DEPRECATION")
 internal fun Project.configurePublishing(publishing: PublishingConfiguration) {
-    val ext = extensions.getByType(ExtraPropertiesExtension::class.java)
-    
     val buildLocal = "buildLocal"
     val compositeBuildLocal = "publishTo${buildLocal.capitalize()}"
     val rootBuildLocal = rootProject.tasks.maybeCreate(compositeBuildLocal).apply {
@@ -132,20 +93,6 @@ internal fun Project.configurePublishing(publishing: PublishingConfiguration) {
             includeProjects.forEach { subproject ->
                 subproject.createSonatypeRepository()
                 subproject.configureSigning()
-            }
-        }
-    } else {
-        // If bintray is configured, create version task and configure subprojects
-        val bintray = if (ext.get("infra.release") == true)
-            publishing.bintray
-        else
-            publishing.bintrayDev ?: publishing.bintray
-
-        val enableBintray = verifyBintrayConfiguration(bintray)
-        if (enableBintray) {
-            createBintrayVersionTask(bintray)
-            includeProjects.forEach { subproject ->
-                subproject.createBintrayRepository(bintray)
             }
         }
     }
@@ -203,63 +150,6 @@ private fun Project.createBuildRepository(name: String, rootBuildLocal: Task) {
     }
 }
 
-private fun Project.verifyBintrayConfiguration(bintray: BintrayConfiguration): Boolean {
-    fun missing(what: String): Boolean {
-        logger.warn("INFRA: Bintray configuration is missing '$what', publishing will not be possible")
-        return false
-    }
-
-    bintray.username ?: return missing("username")
-    val password = bintray.password ?: return missing("password")
-    if (password.startsWith("credentialsJSON")) {
-        logger.warn("INFRA: API key secure token was not expanded, publishing is not possible")
-        return false
-    }
-
-    if (password.trim() != password) {
-        logger.warn("INFRA: API key secure token was expanded to a value with whitespace around it.")
-    }
-
-    if (password.trim().isEmpty()) {
-        logger.warn("INFRA: API key secure token was expanded to empty string.")
-    }
-
-    val organization = bintray.organization ?: return missing("organization")
-    val repository = bintray.repository ?: return missing("repository")
-    val library = bintray.library ?: return missing("library")
-
-    logger.infra("Enabling publishing to Bintray for package '$library' in '$organization/$repository' repository in $this")
-    return true
-}
-
-private fun Project.createBintrayRepository(bintray: BintrayConfiguration) {
-    val username = bintray.username
-        ?: throw KotlinInfrastructureException("Cannot create version. User has not been specified.")
-    val password = bintray.password
-        ?: throw KotlinInfrastructureException("Cannot create version. Password (API key) has not been specified.")
-    val publish = if (bintray.publish) "1" else "0"
-    extensions.configure(PublishingExtension::class.java) { publishing ->
-        publishing.repositories.maven { repo ->
-            repo.name = "bintray"
-            repo.url = URI("${bintray.api("maven")}/;publish=$publish")
-            repo.credentials { credentials ->
-                credentials.username = username
-                credentials.password = password.trim()
-            }
-        }
-    }
-}
-
-private fun BintrayConfiguration.api(section: String): String {
-    val organization = organization
-        ?: throw KotlinInfrastructureException("Cannot create version. Organization has not been specified.")
-    val repository = repository
-        ?: throw KotlinInfrastructureException("Cannot create version. Repository has not been specified.")
-    val library = library
-        ?: throw KotlinInfrastructureException("Cannot create version. Package has not been specified.")
-    return "https://api.bintray.com/$section/$organization/$repository/$library"
-}
-
 private fun Project.createVersionPrepareTask(publishing: PublishingConfiguration): TaskProvider<DefaultTask> {
     return task<DefaultTask>("publishPrepareVersion") {
         group = PublishingPlugin.PUBLISH_TASK_GROUP
@@ -269,54 +159,6 @@ private fun Project.createVersionPrepareTask(publishing: PublishingConfiguration
                 throw KotlinInfrastructureException("Cannot publish development version to Sonatype.")
             }
         }
-    }
-}
-
-private fun Project.createBintrayVersionTask(bintray: BintrayConfiguration) {
-    val bintrayCreateVersion = task<DefaultTask>("publishBintrayCreateVersion") {
-        group = PublishingPlugin.PUBLISH_TASK_GROUP
-        doFirst {
-            val username = bintray.username
-                ?: throw KotlinInfrastructureException("Cannot create version. User has not been specified.")
-            val password = bintray.password
-                ?: throw KotlinInfrastructureException("Cannot create version. Password (API key) has not been specified.")
-            val organization = bintray.organization
-                ?: throw KotlinInfrastructureException("Cannot create version. Organization has not been specified.")
-            val repository = bintray.repository
-                ?: throw KotlinInfrastructureException("Cannot create version. Repository has not been specified.")
-            val library = bintray.library
-                ?: throw KotlinInfrastructureException("Cannot create version. Package has not been specified.")
-
-            val url = URL("${bintray.api("packages")}/versions")
-            val now = Date()
-            val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").apply { timeZone = TimeZone.getTimeZone("UTC") }
-            val date = sdf.format(now)
-            val versionJson = """{"name": "${project.version}", "desc": "", "released":"$date"}"""
-
-            val basicAuthorization = "$username:$password"
-            val encodedAuthorization = Base64.getEncoder().encodeToString(basicAuthorization.toByteArray())
-
-            logger.lifecycle("Creating version ${project.version} for package $library in $organization/$repository on bintray…")
-            logger.infra("URL: $url")
-            logger.infra("User: $username")
-            logger.infra("Sending: $versionJson")
-            val connection = (url.openConnection() as HttpURLConnection).apply {
-                doOutput = true
-                requestMethod = "POST"
-                setRequestProperty("Authorization", "Basic $encodedAuthorization");
-                setRequestProperty("Content-Type", "application/json")
-                outputStream.bufferedWriter().use { it.write(versionJson) }
-            }
-
-            val code = connection.responseCode
-            if (code >= 400) {
-                val text = connection.errorStream.bufferedReader().readText()
-                throw KotlinInfrastructureException("Cannot create version. HTTP response $code: $text")
-            }
-        }
-    }
-    tasks.named("publishPrepareVersion").configure {
-        it.dependsOn(bintrayCreateVersion)
     }
 }
 

@@ -6,11 +6,6 @@ import java.io.*
 open class TeamCityConfiguration {
     var libraryStagingRepoDescription: String? = null
 
-    @Deprecated("Avoid publishing to bintray")
-    var bintrayUser: String? = null
-    @Deprecated("Avoid publishing to bintray")
-    var bintrayToken: String? = null
-
     var jdk = "JDK_18_x64"
 }
 
@@ -40,15 +35,9 @@ fun Project.configureTeamCityConfigGenerator(teamcity: TeamCityConfiguration) {
             }
             @Suppress("DEPRECATION")
             copyResource(teamcityDir, "utils.kt") { text ->
-                val bintrayUser = teamcity.bintrayUser
-                    ?: "%env.BINTRAY_USER%" //throw KotlinInfrastructureException("TeamCity configuration should specify `bintrayUser` parameter")
-                val bintrayToken = teamcity.bintrayToken
-                    ?: "%env.BINTRAY_API_KEY%" //throw KotlinInfrastructureException("TeamCity configuration should specify `bintrayToken` parameter")
                 val libraryStagingRepoDescription = teamcity.libraryStagingRepoDescription
                     ?: throw KotlinInfrastructureException("TeamCity configuration should specify `libraryStagingRepoDescription`: the library description for staging repositories")
                 text
-                    .replace("<<BINTRAY_USER>>", bintrayUser)
-                    .replace("<<BINTRAY_TOKEN>>", bintrayToken)
                     .replace("<<LIBRARY_STAGING_REPO_DESCRIPTION>>", libraryStagingRepoDescription)
                     .replace("<<JDK>>", teamcity.jdk)
             }

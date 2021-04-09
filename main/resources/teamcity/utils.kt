@@ -9,8 +9,6 @@ const val versionSuffixParameter = "versionSuffix"
 const val teamcitySuffixParameter = "teamcitySuffix"
 const val releaseVersionParameter = "releaseVersion"
 
-const val bintrayUserName = "<<BINTRAY_USER>>"
-const val bintrayToken = "<<BINTRAY_TOKEN>>"
 const val libraryStagingRepoDescription = "<<LIBRARY_STAGING_REPO_DESCRIPTION>>"
 
 val platforms = Platform.values()
