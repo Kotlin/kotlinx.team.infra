@@ -15,8 +15,8 @@ publishing {
             name = 'space'
             url "https://maven.pkg.jetbrains.space/kotlin/p/kotlinx/maven"
             credentials {
-                username = project.findProperty("spaceUser")
-                password = project.findProperty("spaceToken")
+                username = project.findProperty("space.user")
+                password = project.findProperty("space.token")
             }
         }
     }
