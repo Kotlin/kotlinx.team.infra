@@ -27,7 +27,7 @@ class InfraPlugin : Plugin<Project> {
         
         // it only creates a task, so no problem with unpopulated extension
         configureTeamCityLogging()
-        configureTeamCityConfigGenerator(extension.teamcity)
+        configureTeamCityConfigGenerator(extension.teamcity, extension.publishing)
 
         extension.afterPublishing {
             configurePublishing(it)

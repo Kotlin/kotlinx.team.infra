@@ -36,15 +36,14 @@ open class PublishingConfiguration @Inject constructor(val objects: ObjectFactor
 }
 
 open class SonatypeConfiguration {
-    // no things to configure here for now
-    // all information is provided with properties or env. variables with known names:
+    var libraryStagingRepoDescription: String? = null
+
+    // other information is provided with properties or env. variables with known names:
     // - libs.repository.id: sonatype staging repository id, 'auto' to open staging implicitly,
     // - libs.sonatype.user: sonatype user name
     // - libs.sonatype.password: sonatype password
     // - libs.sign.key.id, libs.sign.key.private, libs.sign.passphrase: publication signing information
     internal var isSelected: Boolean = false
-
-    public var testProperty: String = "default"
 }
 
 // TODO: Add space configuration
