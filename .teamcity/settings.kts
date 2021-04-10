@@ -73,8 +73,8 @@ fun Project.deploy() = build("Deploy") {
     buildNumberPattern = "$publishVersion-dev-%build.counter%"
     params {
         param(versionParameter, "%build.number%")
-        param("bintray-user", "orangy")
-        password("bintray-key", "credentialsJSON:9a48193c-d16d-46c7-8751-2fb434b09e07")
+        param("space-user", "ilya.gorbunov")
+        password("space-token", "credentialsJSON:413fcda1-dd8f-47ed-a6c2-12c1bc2ea0f0")
     }
 
     vcs {
@@ -86,8 +86,8 @@ fun Project.deploy() = build("Deploy") {
             name = "Deploy Binaries"
             jdkHome = "%env.JDK_18_x64%"
             jvmArgs = "-Xmx1g"
-            tasks = "clean build publishBintrayCreateVersion publish"
-            gradleParams = "--info --stacktrace -P$versionParameter=%$versionParameter% -PbintrayApiKey=%bintray-key% -PbintrayUser=%bintray-user%"
+            tasks = "clean build publish"
+            gradleParams = "--info --stacktrace -P$versionParameter=%$versionParameter% -PspaceUser=%space-user% -PspaceToken=%space-token%"
             buildFile = ""
             gradleWrapperPath = ""
         }

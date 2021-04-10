@@ -1,5 +1,3 @@
-project.ext.bintrayUser = project.hasProperty('bintrayUser') ? project.property('bintrayUser') : null
-project.ext.bintrayApiKey = project.hasProperty('bintrayApiKey') ? project.property('bintrayApiKey') : null
 project.version = project.hasProperty('releaseVersion') ? project.property('releaseVersion') : project.version
 
 task sourceJar(type: Jar) {
@@ -13,16 +11,12 @@ publishing {
             name = 'build'
             url = "$rootProject.buildDir/maven"
         }
-        // TODO: setup publishing to space/kotlinx
         maven {
-            name = 'bintray'
-            def bintrayOrg = project.bintrayOrg
-            def bintrayRepository = project.bintrayRepository
-            def bintrayPackage = project.bintrayPackage
-            url = "https://api.bintray.com/maven/$bintrayOrg/$bintrayRepository/$bintrayPackage/;publish=1"
+            name = 'space'
+            url "https://maven.pkg.jetbrains.space/kotlin/p/kotlinx/maven"
             credentials {
-                username = project.ext.bintrayUser
-                password = project.ext.bintrayApiKey
+                username = project.findProperty("spaceUser")
+                password = project.findProperty("spaceToken")
             }
         }
     }
@@ -51,45 +45,3 @@ afterEvaluate {
     }
 }
 
-task publishBintrayCreateVersion() {
-    doFirst {
-        def url = new URL("https://api.bintray.com/packages/${bintrayOrg}/${bintrayRepository}/${bintrayPackage}/versions")
-        def now = new Date()
-        def date = now.format("yyyy-MM-dd'T'HH:mm:ss'Z'", TimeZone.getTimeZone('UTC'))
-        def versionJson = '{"name": "' + project.version + '", "desc": "", "released":"' + date + '"}'
-        def user = project.bintrayUser
-        if (user == null)
-            throw new Exception("Cannot create version. User has not been specified. Provide project property with the name 'bintrayUser'")
-
-        def apiKey = project.bintrayApiKey
-        if (apiKey == null)
-            throw new Exception("Cannot create version. API key has not been specified. Provide project property with the name 'bintrayApiKey'")
-
-        def encodedAuthorization = java.util.Base64.getEncoder().encodeToString((user + ":" + apiKey).getBytes());
-
-        logger.lifecycle("Creating version ${project.version} for package ${bintrayPackage} in ${bintrayOrg}/${bintrayRepository} on bintray…")
-        logger.info("URL: $url")
-        logger.info("User: $user")
-        logger.info("Sending: $versionJson")
-        def connection = (HttpURLConnection) url.openConnection()
-        connection.with {
-            doOutput = true
-            requestMethod = 'POST'
-            setRequestProperty("Authorization", "Basic $encodedAuthorization");
-            setRequestProperty("Content-Type", "application/json")
-            outputStream.withWriter { writer ->
-                writer << versionJson
-            }
-        }
-        def code = connection.getResponseCode()
-        if (code >= 400) {
-            def br = new BufferedReader(new InputStreamReader(connection.getErrorStream()));
-            def sb = new StringBuilder()
-            String output
-            while ((output = br.readLine()) != null) {
-                sb.append(output)
-            }
-            throw new Exception("Cannot create version. HTTP response $code: ${sb.toString()}")
-        }
-    }
-}

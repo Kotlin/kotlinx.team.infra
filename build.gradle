@@ -4,7 +4,6 @@ import java.nio.file.Paths
 buildscript {
     repositories {
         mavenCentral()
-        jcenter()
     }
 }
 
@@ -14,7 +13,7 @@ plugins {
     id 'org.jetbrains.kotlin.jvm' version "1.4.0"
 }
 
-// Load `local.properties` file, if it exists. You can put your bintrayUser and bintrayApiKey values there, that file is ignored by git
+// Load `local.properties` file, if it exists. You can put your spaceUser and spaceToken values there, that file is ignored by git
 if (Files.exists(Paths.get("$project.rootDir/local.properties"))) {
     def localProperties = new Properties()
     localProperties.load(new FileInputStream("$project.rootDir/local.properties"))
