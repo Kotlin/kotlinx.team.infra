@@ -17,7 +17,7 @@ fun Project.configureTeamCityLogging() {
         println("##teamcity[buildNumber '${project.version}${teamcitySuffix?.let { " ($it)" } ?: ""}']")
 
         gradle.taskGraph.beforeTask {
-            println("##teamcity[progressMessage 'Gradle: ${it.project.path}:${it.name}']")
+            println("##teamcity[progressMessage 'Gradle: ${this.project.path}:${this.name}']")
         }
     }
 }

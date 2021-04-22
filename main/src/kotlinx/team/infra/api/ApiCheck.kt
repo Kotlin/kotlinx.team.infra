@@ -27,7 +27,7 @@ fun Project.configureApiCheck(apiCheck: ApiCheckConfiguration) {
 
     includeProjects.forEach { subproject ->
         // Checking for MPP beforeEvaluate is too early, and in afterEvaluate too late because node plugin breaks
-        subproject.pluginManager.withPlugin("kotlin-multiplatform") { plugin ->
+        subproject.pluginManager.withPlugin("kotlin-multiplatform") {
             val multiplatform = multiplatformClass?.let { subproject.extensions.findByType(it) }
             if (multiplatform == null) {
                 logger.infra("Skipping apiCheck configuration for $subproject because multiplatform plugin has not been configured properly")
@@ -35,24 +35,25 @@ fun Project.configureApiCheck(apiCheck: ApiCheckConfiguration) {
             }
 
             val apiCheckTask = subproject.tasks.create("checkApi") {
-                it.group = "verification"
-                it.description = "Runs API checks for 'main' compilations of all targets"
+                group = "verification"
+                description = "Runs API checks for 'main' compilations of all targets"
             }
             
             val apiPublishTask = subproject.tasks.create("publishApiToBuildLocal") {
-                it.group = "publishing"
-                it.description = "Publishes API for 'main' compilations of all targets into local build folder"
+                group = "publishing"
+                description = "Publishes API for 'main' compilations of all targets into local build folder"
             }
             tasks.findByName("publishToBuildLocal")?.dependsOn(apiPublishTask)
 
             val apiSyncTask = subproject.tasks.create("syncApi") {
-                it.group = "other"
-                it.description = "Syncs API for 'main' compilations of all targets"
+                group = "other"
+                description = "Syncs API for 'main' compilations of all targets"
             }
 
             subproject.tasks.getByName("check").dependsOn(apiCheckTask)
 
-            multiplatform.targets.all { target ->
+            multiplatform.targets.all {
+                val target = this
                 subproject.configureTargetApiCheck(target, apiCheckTask, apiSyncTask, apiPublishTask, apiCheck)
             }
         }

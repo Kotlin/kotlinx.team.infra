@@ -40,7 +40,7 @@ class InfraPlugin : Plugin<Project> {
         configureNativeMultiplatform()
 
         subprojects {
-            it.applyModule()
+            applyModule()
         }
     }
 

@@ -33,11 +33,11 @@ open class DirectoryCompareTask : DefaultTask() {
         val actualFiles = mutableSetOf<RelativePath>()
         val expectedFiles = mutableSetOf<RelativePath>()
         logger.infra("Comparing $expectedDir and $actualDir")
-        project.fileTree(actualDir).visit { file ->
-            actualFiles.add(file.relativePath)
+        project.fileTree(actualDir).visit {
+            actualFiles.add(this.relativePath)
         }
-        project.fileTree(expectedDir).visit { file ->
-            expectedFiles.add(file.relativePath)
+        project.fileTree(expectedDir).visit {
+            expectedFiles.add(this.relativePath)
         }
 
         val missingFiles = expectedFiles - actualFiles

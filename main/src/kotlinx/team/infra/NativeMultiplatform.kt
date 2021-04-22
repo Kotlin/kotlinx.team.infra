@@ -17,9 +17,10 @@ fun Project.configureNativeMultiplatform() {
     }
 
     val ideaActive = System.getProperty("idea.active")?.toBoolean() ?: false
-    subprojects { subproject ->
+    subprojects {
+        val subproject = this
         // Checking for MPP beforeEvaluate is too early, and in afterEvaluate too late because node plugin breaks
-        subproject.pluginManager.withPlugin("kotlin-multiplatform") { plugin ->
+        subproject.pluginManager.withPlugin("kotlin-multiplatform") {
             val kotlin = subproject.extensions.findByType(multiplatformExtensionClass)
             if (kotlin == null) {
                 logger.infra("Skipping native configuration for $subproject because multiplatform plugin has not been configured properly")
@@ -87,8 +88,8 @@ class NativeIdeaInfraExtension(project: Project, kotlin: KotlinMultiplatformExte
         }
 
         project.afterEvaluate {
-            kotlin.sourceSets.getByName("${sourceSetName}Main") { sourceSet ->
-                sourceSet.kotlin.srcDir("${hostPreset.name}Main/src")
+            kotlin.sourceSets.getByName("${sourceSetName}Main") {
+                kotlin.srcDir("${hostPreset.name}Main/src")
             }
         }
     }
@@ -120,11 +121,11 @@ class NativeBuildInfraExtension(project: Project, kotlin: KotlinMultiplatformExt
             sharedConfigs.forEach { config -> config() }
         }
 
-        kotlin.sourceSets.getByName("${preset.name}Main") { sourceSet ->
-            sourceSet.dependsOn(mainSourceSet)
+        kotlin.sourceSets.getByName("${preset.name}Main") {
+            dependsOn(mainSourceSet)
         }
-        kotlin.sourceSets.getByName("${preset.name}Test") { sourceSet ->
-            sourceSet.dependsOn(testSourceSet)
+        kotlin.sourceSets.getByName("${preset.name}Test") {
+            dependsOn(testSourceSet)
         }
     }
 

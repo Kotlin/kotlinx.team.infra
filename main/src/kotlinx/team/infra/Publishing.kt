@@ -129,20 +129,20 @@ private fun Project.createBuildRepository(name: String, rootBuildLocal: Task) {
     if (rootBuildLocal !== compositeTask)
         rootBuildLocal.dependsOn(compositeTask)
 
-    extensions.configure(PublishingExtension::class.java) { publishing ->
-        val repo = publishing.repositories.maven { repo ->
-            repo.name = name
-            repo.setUrl(dir)
+    extensions.configure(PublishingExtension::class.java) {
+        val repo = repositories.maven {
+            this.name = name
+            this.setUrl(dir)
         }
 
         afterEvaluate {
             tasks.named("clean", Delete::class.java) {
-                it.delete(dir)
+                delete(dir)
             }
 
-            tasks.withType(PublishToMavenRepository::class.java) { task ->
-                if (task.repository == repo) {
-                    compositeTask.dependsOn(task)
+            tasks.withType(PublishToMavenRepository::class.java) {
+                if (this.repository == repo) {
+                    compositeTask.dependsOn(this)
                 }
             }
         }
@@ -196,13 +196,13 @@ private fun Project.createSonatypeRepository() {
     val password =  project.sonatypePassword
         ?: throw KotlinInfrastructureException("Cannot setup publication. Password (API key) has not been specified.")
 
-    extensions.configure(PublishingExtension::class.java) { publishing ->
-        publishing.repositories.maven { repo ->
-            repo.name = "sonatype"
-            repo.url = sonatypeRepositoryUri()
-            repo.credentials { credentials ->
-                credentials.username = username
-                credentials.password = password.trim()
+    extensions.configure(PublishingExtension::class.java) {
+        repositories.maven {
+            name = "sonatype"
+            url = sonatypeRepositoryUri()
+            credentials {
+                this.username = username
+                this.password = password.trim()
             }
         }
     }
@@ -215,9 +215,9 @@ private fun Project.configurePublications(publishing: PublishingConfiguration) {
     val javadocJar = tasks.create("javadocJar", Jar::class.java).apply {
         archiveClassifier.set("javadoc")
     }
-    extensions.configure(PublishingExtension::class.java) { publishingExtension ->
-        publishingExtension.publications.all {
-            with(it as MavenPublication) {
+    extensions.configure(PublishingExtension::class.java) {
+        publications.all {
+            with(this as MavenPublication) {
                 artifact(javadocJar)
                 configureRequiredPomAttributes(project, publishing)
             }
@@ -226,34 +226,33 @@ private fun Project.configurePublications(publishing: PublishingConfiguration) {
 }
 
 fun Project.mavenPublicationsPom(action: Action<MavenPom>) {
-    extensions.configure(PublishingExtension::class.java) { publishingExtension ->
-        publishingExtension.publications.all {
-            action.execute((it as MavenPublication).pom)
+    extensions.configure(PublishingExtension::class.java) {
+        publications.all {
+            action.execute((this as MavenPublication).pom)
         }
     }
 }
 
 private fun MavenPublication.configureRequiredPomAttributes(project: Project, publishing: PublishingConfiguration) {
     val publication = this
-    // TODO: get rid of 'it's
     pom {
-        it.name.set(publication.artifactId)
-        it.description.set(project.description ?: publication.artifactId)
-        it.url.set(publishing.libraryRepoUrl)
-        it.licenses {
-            it.license {
-                it.name.set("The Apache License, Version 2.0")
-                it.url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+        name.set(publication.artifactId)
+        description.set(project.description ?: publication.artifactId)
+        url.set(publishing.libraryRepoUrl)
+        licenses {
+            license {
+                name.set("The Apache License, Version 2.0")
+                url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
             }
         }
-        it.scm {
-            it.url.set(publishing.libraryRepoUrl)
+        scm {
+            url.set(publishing.libraryRepoUrl)
         }
-        it.developers {
-            it.developer {
-                it.name.set("JetBrains Team")
-                it.organization.set("JetBrains")
-                it.organizationUrl.set("https://www.jetbrains.com")
+        developers {
+            developer {
+                name.set("JetBrains Team")
+                organization.set("JetBrains")
+                organizationUrl.set("https://www.jetbrains.com")
             }
         }
     }
@@ -267,8 +266,8 @@ private fun Project.configureSigning() {
 
     if (keyId != null) {
         project.extensions.configure<SigningExtension>("signing") {
-            it.useInMemoryPgpKeys(keyId, signingKey, signingKeyPassphrase)
-            it.sign(extensions.getByType(PublishingExtension::class.java).publications) // all publications
+            useInMemoryPgpKeys(keyId, signingKey, signingKeyPassphrase)
+            sign(extensions.getByType(PublishingExtension::class.java).publications) // all publications
         }
     } else {
         logger.warn("INFRA: signing key id is not specified, artifact signing is not enabled.")
