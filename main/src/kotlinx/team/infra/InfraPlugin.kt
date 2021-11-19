@@ -29,6 +29,9 @@ class InfraPlugin : Plugin<Project> {
         configureTeamCityLogging()
         configureTeamCityConfigGenerator(extension.teamcity, extension.publishing)
 
+        extension.afterTeamCity {
+            configureTeamcityBuildNumber(it)
+        }
         extension.afterPublishing {
             configurePublishing(it)
         }

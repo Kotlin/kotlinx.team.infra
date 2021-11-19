@@ -8,17 +8,23 @@ open class TeamCityConfiguration {
     var libraryStagingRepoDescription: String? = null
 
     var jdk = "JDK_18_x64"
+
+    var overrideBuildNumber = true
 }
 
 fun Project.configureTeamCityLogging() {
-    val teamcitySuffix = project.findProperty("teamcitySuffix")?.toString()
     if (project.hasProperty("teamcity")) {
-        // Tell teamcity about version number
-        println("##teamcity[buildNumber '${project.version}${teamcitySuffix?.let { " ($it)" } ?: ""}']")
-
         gradle.taskGraph.beforeTask {
             println("##teamcity[progressMessage 'Gradle: ${this.project.path}:${this.name}']")
         }
+    }
+}
+
+fun Project.configureTeamcityBuildNumber(teamcity: TeamCityConfiguration) {
+    if (project.hasProperty("teamcity") && teamcity.overrideBuildNumber) {
+        // Tell teamcity about version number
+        val teamcitySuffix = project.findProperty("teamcitySuffix")?.toString()
+        println("##teamcity[buildNumber '${project.version}${teamcitySuffix?.let { " ($it)" } ?: ""}']")
     }
 }
 
