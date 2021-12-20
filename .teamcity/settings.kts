@@ -73,8 +73,9 @@ fun Project.deploy() = build("Deploy") {
     buildNumberPattern = "$publishVersion-dev-%build.counter%"
     params {
         param(versionParameter, "%build.number%")
-        param("system.space.user", "ilya.gorbunov")
-        password("system.space.token", "credentialsJSON:413fcda1-dd8f-47ed-a6c2-12c1bc2ea0f0")
+        // Space application: Publish to kotlinx packages from tc.jb.com
+        param("system.space.user", "2fb054f3-c6a8-4026-88e6-95887be16311")
+        password("system.space.token", "credentialsJSON:fe0f882d-64e7-4b4c-b752-16c2a36d92a8")
     }
 
     vcs {
