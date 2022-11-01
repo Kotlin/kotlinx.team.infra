@@ -9,6 +9,12 @@ open class TeamCityConfiguration {
 
     var jdk = "JDK_18_x64"
 
+    /**
+     * Specifies whether to override the build number in TeamCity, `true` by default.
+     *
+     * If `true`, the TeamCity build number will be changed to `"${project.version} (%build.counter%)"`.
+     * This value is overridden by `overrideTeamCityBuildNumber` gradle property when provided.
+     */
     var overrideBuildNumber = true
 }
 
@@ -21,7 +27,9 @@ fun Project.configureTeamCityLogging() {
 }
 
 fun Project.configureTeamcityBuildNumber(teamcity: TeamCityConfiguration) {
-    if (project.hasProperty("teamcity") && teamcity.overrideBuildNumber) {
+    val overrideTeamCityBuildNumber = project.findProperty("overrideTeamCityBuildNumber")?.toString()?.toBoolean()
+        ?: teamcity.overrideBuildNumber
+    if (project.hasProperty("teamcity") && overrideTeamCityBuildNumber) {
         // Tell teamcity about version number
         val teamcitySuffix = project.findProperty("teamcitySuffix")?.toString()
         println("##teamcity[buildNumber '${project.version}${teamcitySuffix?.let { " ($it)" } ?: ""}']")
