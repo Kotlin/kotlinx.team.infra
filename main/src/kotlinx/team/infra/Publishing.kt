@@ -91,9 +91,12 @@ internal fun Project.configurePublishing(publishing: PublishingConfiguration) {
         if (verifySonatypeConfiguration()) {
             includeProjects.forEach { subproject ->
                 subproject.createSonatypeRepository()
-                subproject.configureSigning()
             }
         }
+    }
+
+    includeProjects.forEach { subproject ->
+        subproject.configureSigning()
     }
 
     gradle.includedBuilds.forEach { includedBuild ->
