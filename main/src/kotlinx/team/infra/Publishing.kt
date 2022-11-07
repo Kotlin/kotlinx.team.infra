@@ -95,8 +95,10 @@ internal fun Project.configurePublishing(publishing: PublishingConfiguration) {
         }
     }
 
-    includeProjects.forEach { subproject ->
-        subproject.configureSigning()
+    if (project.hasProperty("teamcity")) {
+        includeProjects.forEach { subproject ->
+            subproject.configureSigning()
+        }
     }
 
     gradle.includedBuilds.forEach { includedBuild ->
