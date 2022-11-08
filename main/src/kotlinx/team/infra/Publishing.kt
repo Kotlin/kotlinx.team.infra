@@ -91,8 +91,13 @@ internal fun Project.configurePublishing(publishing: PublishingConfiguration) {
         if (verifySonatypeConfiguration()) {
             includeProjects.forEach { subproject ->
                 subproject.createSonatypeRepository()
-                subproject.configureSigning()
             }
+        }
+    }
+
+    if (project.hasProperty("teamcity")) {
+        includeProjects.forEach { subproject ->
+            subproject.configureSigning()
         }
     }
 
