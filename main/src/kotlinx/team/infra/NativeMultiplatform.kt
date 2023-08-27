@@ -27,7 +27,8 @@ fun Project.configureNativeMultiplatform() {
                 return@withPlugin
             }
 
-            val extension: Any = if (ideaActive)
+            val useNativeBuildInfraInIdea = subproject.findProperty("useNativeBuildInfraInIdea")?.toString()?.toBoolean() ?: false
+            val extension: Any = if (ideaActive && !useNativeBuildInfraInIdea)
                 NativeIdeaInfraExtension(subproject, kotlin, "native")
             else
                 NativeBuildInfraExtension(subproject, kotlin, "native")
