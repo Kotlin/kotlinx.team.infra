@@ -272,7 +272,14 @@ private fun Project.configureSigning() {
     if (keyId != null) {
         project.extensions.configure<SigningExtension>("signing") {
             useInMemoryPgpKeys(keyId, signingKey, signingKeyPassphrase)
-            sign(extensions.getByType(PublishingExtension::class.java).publications) // all publications
+            val signingTasks = sign(extensions.getByType(PublishingExtension::class.java).publications) // all publications
+            // due to each publication including the same javadoc artifact file,
+            // every publication signing task produces (overwrites) the same javadoc.asc signature file beside
+            // and includes it to that publication
+            // Thus, every publication publishing task implicitly depends on every signing task
+            tasks.withType(AbstractPublishToMaven::class.java).configureEach {
+                dependsOn(signingTasks) // make this dependency explicit
+            }
         }
     } else {
         logger.warn("INFRA: signing key id is not specified, artifact signing is not enabled.")
