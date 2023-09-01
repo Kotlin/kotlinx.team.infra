@@ -55,6 +55,7 @@ fun Project.configureTeamCityConfigGenerator(teamcity: TeamCityConfiguration, pu
                 text
                     .replace("<<LIBRARY_STAGING_REPO_DESCRIPTION>>", libraryStagingRepoDescription)
                     .replace("<<JDK>>", teamcity.jdk)
+                    .replace("<<SINGLE_AGENT_MAC_DEPLOYMENT>>", publishing.singleAgentMacDeployment.toString())
             }
             copyResource(teamcityDir, "additionalConfiguration.kt", override = false)
             copyResource(teamcityDir, "settings.kts")
