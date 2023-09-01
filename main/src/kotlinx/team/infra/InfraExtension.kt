@@ -1,6 +1,5 @@
 package kotlinx.team.infra
 
-import kotlinx.team.infra.api.*
 import org.gradle.api.*
 
 open class InfraExtension(val project: Project) {
@@ -24,17 +23,6 @@ open class InfraExtension(val project: Project) {
     fun teamcity(configure: Action<TeamCityConfiguration>) {
         configure.execute(teamcity)
         teamcityHandler?.invoke(teamcity)
-    }
-
-    val apiCheck = project.objects.newInstance<ApiCheckConfiguration>()
-    private var apiCheckHandler: ((ApiCheckConfiguration) -> Unit)? = null
-    internal fun afterApiCheck(handler: (ApiCheckConfiguration) -> Unit) {
-        apiCheckHandler = handler
-    }
-
-    fun apiCheck(configure: Action<ApiCheckConfiguration>) {
-        configure.execute(apiCheck)
-        apiCheckHandler?.invoke(apiCheck)
     }
 }
 

@@ -4,19 +4,6 @@ import org.gradle.api.*
 import org.gradle.api.logging.*
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.tasks.*
-import java.io.*
-
-internal fun cleanup(file: File) {
-    if (file.exists()) {
-        val listing = file.listFiles()
-        if (listing != null) {
-            for (sub in listing) {
-                cleanup(sub)
-            }
-        }
-        file.delete()
-    }
-}
 
 internal inline fun <reified T : Task> Project.task(
     name: String,
