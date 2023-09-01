@@ -145,7 +145,7 @@ private fun Project.createBuildRepository(name: String, rootBuildLocal: Task) {
                 delete(dir)
             }
 
-            tasks.withType(PublishToMavenRepository::class.java) {
+            tasks.withType(PublishToMavenRepository::class.java).configureEach {
                 if (this.repository == repo) {
                     compositeTask.dependsOn(this)
                 }
@@ -217,11 +217,11 @@ private fun Project.configurePublications(publishing: PublishingConfiguration) {
     if (publishing.libraryRepoUrl.isNullOrEmpty()) {
         logger.warn("INFRA: library source control repository URL is not set, publication won't be accepted by Sonatype.")
     }
-    val javadocJar = tasks.create("javadocJar", Jar::class.java).apply {
+    val javadocJar = tasks.register("javadocJar", Jar::class.java) {
         archiveClassifier.set("javadoc")
     }
     extensions.configure(PublishingExtension::class.java) {
-        publications.all {
+        publications.configureEach {
             with(this as MavenPublication) {
                 artifact(javadocJar)
                 configureRequiredPomAttributes(project, publishing)
@@ -232,7 +232,7 @@ private fun Project.configurePublications(publishing: PublishingConfiguration) {
 
 fun Project.mavenPublicationsPom(action: Action<MavenPom>) {
     extensions.configure(PublishingExtension::class.java) {
-        publications.all {
+        publications.configureEach {
             action.execute((this as MavenPublication).pom)
         }
     }
