@@ -5,6 +5,7 @@ import org.gradle.api.*
 import org.gradle.api.plugins.*
 import org.gradle.util.*
 import org.jetbrains.kotlin.gradle.dsl.*
+import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
 import org.jetbrains.kotlin.gradle.plugin.mpp.*
 import org.jetbrains.kotlin.konan.target.*
 
@@ -28,10 +29,12 @@ fun Project.configureNativeMultiplatform() {
             }
 
             val useNativeBuildInfraInIdea = subproject.findProperty("useNativeBuildInfraInIdea")?.toString()?.toBoolean() ?: false
+            val commonMain = kotlin.sourceSets.getByName("commonMain")
+            val commonTest = kotlin.sourceSets.getByName("commonTest")
             val extension: Any = if (ideaActive && !useNativeBuildInfraInIdea)
-                NativeIdeaInfraExtension(subproject, kotlin, "native")
+                NativeIdeaInfraExtension(subproject, kotlin, "native", commonMain, commonTest)
             else
-                NativeBuildInfraExtension(subproject, kotlin, "native")
+                NativeBuildInfraExtension(subproject, kotlin, "native", commonMain, commonTest)
 
             (kotlin as ExtensionAware).extensions.add("infra", extension)
         }
@@ -41,10 +44,12 @@ fun Project.configureNativeMultiplatform() {
 abstract class NativeInfraExtension(
     protected val project: Project,
     protected val kotlin: KotlinMultiplatformExtension,
-    protected val sourceSetName: String
+    protected val sourceSetName: String,
+    commonMainSourceSet: KotlinSourceSet,
+    commonTestSourceSet: KotlinSourceSet,
 ) {
-    protected val mainSourceSet = kotlin.sourceSets.maybeCreate("${sourceSetName}Main")
-    protected val testSourceSet = kotlin.sourceSets.maybeCreate("${sourceSetName}Test")
+    protected val mainSourceSet = kotlin.sourceSets.maybeCreate("${sourceSetName}Main").apply { dependsOn(commonMainSourceSet) }
+    protected val testSourceSet = kotlin.sourceSets.maybeCreate("${sourceSetName}Test").apply { dependsOn(commonTestSourceSet) }
 
     protected val sharedConfigs = mutableListOf<KotlinNativeTarget.() -> Unit>()
     fun shared(configure: Closure<*>) = shared { ConfigureUtil.configure(configure, this) }
@@ -60,8 +65,13 @@ abstract class NativeInfraExtension(
     abstract fun common(name: String, configure: NativeInfraExtension.() -> Unit)
 }
 
-class NativeIdeaInfraExtension(project: Project, kotlin: KotlinMultiplatformExtension, sourceSetName: String) :
-    NativeInfraExtension(project, kotlin, sourceSetName) {
+class NativeIdeaInfraExtension(
+    project: Project,
+    kotlin: KotlinMultiplatformExtension,
+    sourceSetName: String,
+    commonMainSourceSet: KotlinSourceSet,
+    commonTestSourceSet: KotlinSourceSet,
+) : NativeInfraExtension(project, kotlin, sourceSetName, commonMainSourceSet, commonTestSourceSet) {
 
     private val hostManager = createHostManager()
 
@@ -96,15 +106,18 @@ class NativeIdeaInfraExtension(project: Project, kotlin: KotlinMultiplatformExte
     }
 
     override fun common(name: String, configure: NativeInfraExtension.() -> Unit) {
-        kotlin.sourceSets.create("${name}Main").dependsOn(mainSourceSet)
-        kotlin.sourceSets.create("${name}Test").dependsOn(testSourceSet)
-        val extension = NativeIdeaInfraExtension(project, kotlin, name)
+        val extension = NativeIdeaInfraExtension(project, kotlin, name, mainSourceSet, testSourceSet)
         extension.configure()
     }
 }
 
-class NativeBuildInfraExtension(project: Project, kotlin: KotlinMultiplatformExtension, sourceSetName: String) :
-    NativeInfraExtension(project, kotlin, sourceSetName) {
+class NativeBuildInfraExtension(
+    project: Project,
+    kotlin: KotlinMultiplatformExtension,
+    sourceSetName: String,
+    commonMainSourceSet: KotlinSourceSet,
+    commonTestSourceSet: KotlinSourceSet,
+) : NativeInfraExtension(project, kotlin, sourceSetName, commonMainSourceSet, commonTestSourceSet) {
 
     private val nativePresets = kotlin.presets.filterIsInstance<AbstractKotlinNativeTargetPreset<*>>()
 
@@ -131,9 +144,7 @@ class NativeBuildInfraExtension(project: Project, kotlin: KotlinMultiplatformExt
     }
 
     override fun common(name: String, configure: NativeInfraExtension.() -> Unit) {
-        kotlin.sourceSets.create("${name}Main").dependsOn(mainSourceSet)
-        kotlin.sourceSets.create("${name}Test").dependsOn(testSourceSet)
-        val extension = NativeBuildInfraExtension(project, kotlin, name)
+        val extension = NativeBuildInfraExtension(project, kotlin, name, mainSourceSet, testSourceSet)
         extension.configure()
     }
 }
