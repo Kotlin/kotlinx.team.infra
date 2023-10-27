@@ -145,11 +145,9 @@ private fun Project.createBuildRepository(name: String, rootBuildLocal: Task) {
                 delete(dir)
             }
 
-            tasks.withType(PublishToMavenRepository::class.java) {
-                if (this.repository == repo) {
-                    compositeTask.dependsOn(this)
-                }
-            }
+            compositeTask.dependsOn(
+                tasks.withType(PublishToMavenRepository::class.java).matching { it.repository == repo }
+            )
         }
     }
 }
