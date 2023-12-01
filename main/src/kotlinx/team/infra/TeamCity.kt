@@ -7,7 +7,7 @@ open class TeamCityConfiguration {
     @Deprecated("Configure libraryStagingRepoDescription in infra/publishing/sonatype")
     var libraryStagingRepoDescription: String? = null
 
-    var jdk = "JDK_18_x64"
+    var jdk = "JDK_18"
 
     /**
      * Specifies whether to override the build number in TeamCity, `true` by default.
