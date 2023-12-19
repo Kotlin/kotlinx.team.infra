@@ -33,6 +33,11 @@ open class PublishingConfiguration @Inject constructor(val objects: ObjectFactor
     fun include(vararg name: String) {
         includeProjects.addAll(name)
     }
+
+    /**
+     * Build all artifacts for publishing and deploy them from a single mac agent.
+     */
+    var singleAgentMacDeployment: Boolean = false
 }
 
 open class SonatypeConfiguration {
