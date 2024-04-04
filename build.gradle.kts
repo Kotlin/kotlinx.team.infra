@@ -1,5 +1,7 @@
 import org.jetbrains.kotlin.samWithReceiver.gradle.SamWithReceiverExtension
+import java.net.URI
 import java.nio.file.Files
+import java.nio.file.Path
 import java.util.Properties
 
 buildscript {
@@ -54,6 +56,59 @@ sourceSets {
     }
 }
 
+configure<SamWithReceiverExtension> {
+    annotation("org.gradle.api.HasImplicitReceiver")
+}
+
+project.version = project.findProperty("releaseVersion") ?: project.version
+
+tasks.register<Jar>("sourceJar") {
+    archiveClassifier.set("sources")
+    from(sourceSets.main.get().java.sourceDirectories)
+}
+
+configure<PublishingExtension> {
+    repositories {
+        maven {
+            name = "build"
+            url = Path.of(rootProject.buildDir.path, "maven").toUri()
+        }
+        maven {
+            name = "space"
+            url = URI.create("https://maven.pkg.jetbrains.space/kotlin/p/kotlinx/maven")
+            credentials {
+                username = project.findProperty("space.user") as? String
+                password = project.findProperty("space.token") as? String
+            }
+        }
+    }
+
+    publications.configureEach {
+        if (this is MavenPublication) artifact(tasks["sourceJar"])
+    }
+}
+
+afterEvaluate {
+    tasks {
+        named<Delete>("clean") {
+            publishing.repositories.forEach { repository ->
+                if (repository is MavenArtifactRepository && repository.name == "build") {
+                    delete.add(repository.url)
+                }
+            }
+        }
+
+        create("publishToBuildRepository") {
+            group = "publishing"
+            withType(PublishToMavenRepository::class.java) {
+                if (repository.name == "build") {
+                    this@create.dependsOn(this)
+                }
+            }
+        }
+    }
+}
+
 dependencies {
     val kotlin_version = "1.5.0"
     api("org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version")
@@ -67,12 +122,6 @@ dependencies {
     testImplementation(gradleTestKit())
     testImplementation("junit:junit:4.12")
 }
-
-configure<SamWithReceiverExtension> {
-    annotation("org.gradle.api.HasImplicitReceiver")
-}
-
-apply(from = "publish.gradle")
 
 if (project.hasProperty("teamcity")) {
     gradle.taskGraph.beforeTask {
