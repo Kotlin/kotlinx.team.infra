@@ -9,16 +9,16 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        // TODO Re-introduce kotlin_version after upgrading Gradle
-        classpath("org.jetbrains.kotlin:kotlin-sam-with-receiver:1.5.0")
+        classpath("org.jetbrains.kotlin:kotlin-sam-with-receiver:${project.extra["kotlinVersion"]}")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:${project.extra["kotlinVersion"]}")
     }
 }
 
 plugins {
     id("maven-publish")
     id("java-gradle-plugin")
-    id("org.jetbrains.kotlin.jvm")
 }
+apply(plugin = "org.jetbrains.kotlin.jvm")
 apply(plugin = "kotlin-sam-with-receiver")
 
 // Load `local.properties` file, if it exists. You can put your spaceUser and spaceToken values there, that file is ignored by git
@@ -110,15 +110,14 @@ afterEvaluate {
 }
 
 dependencies {
-    val kotlin_version = "1.5.0"
-    api("org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version")
-    api("org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version")
-    api("org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version")
+    api("org.jetbrains.kotlin:kotlin-stdlib")
+    api("org.jetbrains.kotlin:kotlin-stdlib-jdk7")
+    api("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 
-    compileOnly("org.jetbrains.kotlin:kotlin-compiler:$kotlin_version")
-    compileOnly("org.jetbrains.kotlin.multiplatform:org.jetbrains.kotlin.multiplatform.gradle.plugin:$kotlin_version")
+    compileOnly("org.jetbrains.kotlin:kotlin-compiler")
+    compileOnly("org.jetbrains.kotlin.multiplatform:org.jetbrains.kotlin.multiplatform.gradle.plugin:${project.extra["kotlinVersion"]}")
 
-    testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
+    testImplementation("org.jetbrains.kotlin:kotlin-test-junit")
     testImplementation(gradleTestKit())
     testImplementation("junit:junit:4.12")
 }
