@@ -1,35 +1,44 @@
 package kotlinx.team.infra
 
-import groovy.lang.*
-import org.gradle.api.*
+import org.gradle.api.Action
+import org.gradle.api.DefaultTask
+import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.model.ObjectFactory
-import org.gradle.api.plugins.*
-import org.gradle.api.publish.*
+import org.gradle.api.plugins.ExtraPropertiesExtension
+import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPom
 import org.gradle.api.publish.maven.MavenPublication
-import org.gradle.api.publish.maven.plugins.*
-import org.gradle.api.publish.maven.tasks.*
-import org.gradle.api.publish.plugins.*
-import org.gradle.api.tasks.*
+import org.gradle.api.publish.maven.plugins.MavenPublishPlugin
+import org.gradle.api.publish.maven.tasks.AbstractPublishToMaven
+import org.gradle.api.publish.maven.tasks.PublishToMavenRepository
+import org.gradle.api.publish.plugins.PublishingPlugin
+import org.gradle.api.tasks.Copy
+import org.gradle.api.tasks.Delete
+import org.gradle.api.tasks.TaskProvider
 import org.gradle.jvm.tasks.Jar
 import org.gradle.plugins.signing.SigningExtension
 import org.gradle.plugins.signing.SigningPlugin
-import org.gradle.util.*
-import java.net.*
-import java.text.*
-import java.util.*
+import java.net.URI
 import javax.inject.Inject
 
-open class PublishingConfiguration @Inject constructor(val objects: ObjectFactory) {
+open class PublishingConfiguration @Inject constructor(
+    @Suppress("MemberVisibilityCanBePrivate")
+    val objects: ObjectFactory
+) {
     var libraryRepoUrl: String? = null
 
     val sonatype = objects.newInstance<SonatypeConfiguration>()
+
+    @Suppress("unused")
     fun sonatype(configure: Action<SonatypeConfiguration>) {
         configure.execute(sonatype)
         sonatype.isSelected = true
     }
 
     var includeProjects: MutableList<String> = mutableListOf()
+
+    @Suppress("unused")
     fun include(vararg name: String) {
         includeProjects.addAll(name)
     }
@@ -60,10 +69,7 @@ fun Project.configureProjectVersion() {
         ext.set("infra.release", false)
         // Configure version
         val versionSuffix = project.findProperty("versionSuffix")?.toString()
-        if (versionSuffix != null && versionSuffix.isNotEmpty())
-            "${project.version}-$versionSuffix"
-        else
-            project.version.toString()
+        if (!versionSuffix.isNullOrEmpty()) "${project.version}-$versionSuffix" else project.version.toString()
     }
 
     logger.infra("Configured root project version as '${project.version}'")
@@ -71,7 +77,7 @@ fun Project.configureProjectVersion() {
 
 internal fun Project.configurePublishing(publishing: PublishingConfiguration) {
     val buildLocal = "buildLocal"
-    val compositeBuildLocal = "publishTo${buildLocal.capitalize()}"
+    val compositeBuildLocal = "publishTo${buildLocal.replaceFirstChar(Char::uppercaseChar)}"
     val rootBuildLocal = rootProject.tasks.maybeCreate(compositeBuildLocal).apply {
         group = PublishingPlugin.PUBLISH_TASK_GROUP
     }
@@ -104,10 +110,12 @@ internal fun Project.configurePublishing(publishing: PublishingConfiguration) {
     gradle.includedBuilds.forEach { includedBuild ->
         logger.infra("Included build: ${includedBuild.name} from ${includedBuild.projectDir}")
         val includedPublishTask = includedBuild.task(":$compositeBuildLocal")
-        val includedName = includedBuild.name.split(".").joinToString(separator = "") { it.capitalize() }
+        val includedName = includedBuild.name
+            .split(".")
+            .joinToString(separator = "") { it.replaceFirstChar(Char::uppercaseChar) }
         val copyIncluded = task<Copy>("copy${includedName}BuildLocal") {
             from(includedBuild.projectDir.resolve("build/maven"))
-            into(buildDir.resolve("maven"))
+            into(layout.buildDirectory.get().asFile.resolve("maven"))
             dependsOn(includedPublishTask)
         }
         rootBuildLocal.dependsOn(copyIncluded)
@@ -123,10 +131,10 @@ private fun Project.applyMavenPublish() {
 }
 
 private fun Project.createBuildRepository(name: String, rootBuildLocal: Task) {
-    val dir = rootProject.buildDir.resolve("maven")
+    val dir = rootProject.layout.buildDirectory.get().asFile.resolve("maven")
 
     logger.infra("Enabling publishing to $name in $this")
-    val compositeTask = tasks.maybeCreate("publishTo${name.capitalize()}").apply {
+    val compositeTask = tasks.maybeCreate("publishTo${name.replaceFirstChar(Char::uppercaseChar)}").apply {
         group = PublishingPlugin.PUBLISH_TASK_GROUP
         description = "Publishes all Maven publications produced by this project to Maven repository '$name'"
     }
@@ -228,6 +236,7 @@ private fun Project.configurePublications(publishing: PublishingConfiguration) {
     }
 }
 
+@Suppress("unused")
 fun Project.mavenPublicationsPom(action: Action<MavenPom>) {
     extensions.configure(PublishingExtension::class.java) {
         publications.configureEach {
@@ -245,7 +254,7 @@ private fun MavenPublication.configureRequiredPomAttributes(project: Project, pu
         licenses {
             license {
                 name.set("The Apache License, Version 2.0")
-                url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
             }
         }
         scm {

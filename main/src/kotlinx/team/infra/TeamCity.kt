@@ -20,8 +20,10 @@ open class TeamCityConfiguration {
 
 fun Project.configureTeamCityLogging() {
     if (project.hasProperty("teamcity")) {
-        gradle.taskGraph.beforeTask {
-            println("##teamcity[progressMessage 'Gradle: ${this.project.path}:${this.name}']")
+        gradle.taskGraph.whenReady {
+            tasks.forEach { task ->
+                task.doFirst { println("##teamcity[progressMessage 'Gradle: ${project.path}:${task.name}']") }
+            }
         }
     }
 }

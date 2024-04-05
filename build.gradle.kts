@@ -71,7 +71,7 @@ configure<PublishingExtension> {
     repositories {
         maven {
             name = "build"
-            url = Path.of(rootProject.buildDir.path, "maven").toUri()
+            url = Path.of(rootProject.layout.buildDirectory.get().asFile.path, "maven").toUri()
         }
         maven {
             name = "space"
@@ -117,13 +117,17 @@ dependencies {
     compileOnly("org.jetbrains.kotlin:kotlin-compiler")
     compileOnly("org.jetbrains.kotlin.multiplatform:org.jetbrains.kotlin.multiplatform.gradle.plugin:${project.extra["kotlinVersion"]}")
 
+    implementation("org.semver4j:semver4j:5.2.2")
+
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit")
     testImplementation(gradleTestKit())
-    testImplementation("junit:junit:4.12")
+    testImplementation("junit:junit:4.13.2")
 }
 
 if (project.hasProperty("teamcity")) {
-    gradle.taskGraph.beforeTask {
-        println("##teamcity[progressMessage 'Gradle: ${project.path}:$name']")
+    gradle.taskGraph.whenReady {
+        tasks.forEach { task ->
+            task.doFirst { println("##teamcity[progressMessage 'Gradle: ${project.path}:${task.name}']") }
+        }
     }
 }
