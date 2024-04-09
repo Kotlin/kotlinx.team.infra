@@ -11,8 +11,8 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.*
 
-private const val REQUIRED_GRADLE_VERSION = "6.0"
-private const val REQUIRED_KOTLIN_VERSION = "1.4.0"
+private const val REQUIRED_GRADLE_VERSION = "7.0"
+private const val REQUIRED_KOTLIN_VERSION = "1.8.0"
 private const val INFRA_EXTENSION_NAME = "infra"
 
 @Suppress("unused")
