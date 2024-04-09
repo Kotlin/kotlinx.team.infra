@@ -1,17 +1,22 @@
 package kotlinx.team.infra
 
-import org.gradle.api.*
-import org.gradle.util.*
-import org.jetbrains.kotlin.gradle.plugin.*
-import java.io.*
-import java.nio.file.*
+import org.gradle.api.GradleException
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.util.GradleVersion
+import org.jetbrains.kotlin.gradle.plugin.KotlinBasePluginWrapper
+import org.semver4j.Semver
+import java.io.FileInputStream
+import java.nio.file.Files
+import java.nio.file.Paths
 import java.util.*
+
+private const val REQUIRED_GRADLE_VERSION = "7.0"
+private const val REQUIRED_KOTLIN_VERSION = "1.8.0"
+private const val INFRA_EXTENSION_NAME = "infra"
 
 @Suppress("unused")
 class InfraPlugin : Plugin<Project> {
-    private val requiredGradleVersion = "6.0"
-    private val requiredKotlinVersion = "1.4.0"
-    private val INFRA_EXTENSION_NAME = "infra"
 
     override fun apply(target: Project) = target.run {
         verifyGradleVersion()
@@ -81,16 +86,17 @@ class InfraPlugin : Plugin<Project> {
             tryGetClass<KotlinBasePluginWrapper>("org.jetbrains.kotlin.gradle.plugin.KotlinBasePluginWrapper")
         if (kotlinClass != null) {
             plugins.findPlugin(kotlinClass)?.run {
-                logger.infra("Detected Kotlin plugin version '$kotlinPluginVersion'")
-                if (VersionNumber.parse(kotlinPluginVersion) < VersionNumber.parse(requiredKotlinVersion))
-                    throw KotlinInfrastructureException("JetBrains Kotlin Infrastructure plugin requires Kotlin version $requiredKotlinVersion or higher")
+                logger.infra("Detected Kotlin plugin version '$pluginVersion'")
+                if (Semver(pluginVersion) < Semver(REQUIRED_KOTLIN_VERSION))
+                    throw KotlinInfrastructureException("JetBrains Kotlin Infrastructure plugin requires Kotlin version $REQUIRED_KOTLIN_VERSION or higher")
             }
         }
     }
 
+    @Suppress("UnusedReceiverParameter")
     private fun Project.verifyGradleVersion() {
-        if (GradleVersion.current() < GradleVersion.version(requiredGradleVersion))
-            throw KotlinInfrastructureException("JetBrains Kotlin Infrastructure plugin requires Gradle version $requiredGradleVersion or higher")
+        if (GradleVersion.current() < GradleVersion.version(REQUIRED_GRADLE_VERSION))
+            throw KotlinInfrastructureException("JetBrains Kotlin Infrastructure plugin requires Gradle version $REQUIRED_GRADLE_VERSION or higher")
     }
 }
 

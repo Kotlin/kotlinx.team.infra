@@ -48,20 +48,24 @@ abstract class NativeInfraExtension(
     commonMainSourceSet: KotlinSourceSet,
     commonTestSourceSet: KotlinSourceSet,
 ) {
-    protected val mainSourceSet = kotlin.sourceSets.maybeCreate("${sourceSetName}Main").apply { dependsOn(commonMainSourceSet) }
-    protected val testSourceSet = kotlin.sourceSets.maybeCreate("${sourceSetName}Test").apply { dependsOn(commonTestSourceSet) }
+    protected val mainSourceSet: KotlinSourceSet = kotlin.sourceSets
+        .maybeCreate("${sourceSetName}Main")
+        .apply { dependsOn(commonMainSourceSet) }
+    protected val testSourceSet: KotlinSourceSet = kotlin.sourceSets
+        .maybeCreate("${sourceSetName}Test")
+        .apply { dependsOn(commonTestSourceSet) }
 
     protected val sharedConfigs = mutableListOf<KotlinNativeTarget.() -> Unit>()
-    fun shared(configure: Closure<*>) = shared { ConfigureUtil.configure(configure, this) }
+    fun shared(configure: Closure<*>) = shared { project.configure(this, configure) }
     fun shared(configure: KotlinNativeTarget.() -> Unit) {
         sharedConfigs.add(configure)
     }
 
     fun target(name: String) = target(name) { }
-    fun target(name: String, configure: Closure<*>) = target(name) { ConfigureUtil.configure(configure, this) }
+    fun target(name: String, configure: Closure<*>) = target(name) { project.configure(this, configure) }
     abstract fun target(name: String, configure: KotlinNativeTarget.() -> Unit)
 
-    fun common(name: String, configure: Closure<*>) = common(name) { ConfigureUtil.configure(configure, this) }
+    fun common(name: String, configure: Closure<*>) = common(name) { project.configure(this, configure) }
     abstract fun common(name: String, configure: NativeInfraExtension.() -> Unit)
 }
 
@@ -130,7 +134,7 @@ class NativeBuildInfraExtension(
         val preset = nativePresets.singleOrNull { it.name == name } ?: return
         project.logger.infra("Creating target '${preset.name}' with dependency on '$sourceSetName'")
 
-        val target = kotlin.targetFromPreset(preset) {
+        kotlin.targetFromPreset(preset) {
             configure()
             sharedConfigs.forEach { config -> config() }
         }
