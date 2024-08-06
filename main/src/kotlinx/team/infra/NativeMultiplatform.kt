@@ -31,8 +31,8 @@ fun Project.configureNativeMultiplatform() {
             val commonTest = kotlin.sourceSets.getByName("commonTest")
 
             val ideaActive = System.getProperty("idea.active")?.toBoolean() == true
-            val useNativeBuildInfraInIdea = subproject.findProperty("useNativeBuildInfraInIdea")?.toString()?.toBoolean() == true
-            val extension: Any = if (ideaActive && !useNativeBuildInfraInIdea)
+            val usePreHmppIdeaWorkaround = subproject.findProperty("usePreHmppIdeaWorkaround")?.toString()?.toBoolean() == true
+            val extension: Any = if (ideaActive && usePreHmppIdeaWorkaround)
                 PreHmppIdeaNativeInfraExtension(subproject, kotlin, "native", commonMain, commonTest)
             else
                 StandardNativeInfraExtension(subproject, kotlin, "native", commonMain, commonTest)
