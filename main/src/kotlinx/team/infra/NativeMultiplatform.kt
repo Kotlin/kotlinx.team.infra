@@ -17,7 +17,6 @@ fun Project.configureNativeMultiplatform() {
         return
     }
 
-    val ideaActive = System.getProperty("idea.active")?.toBoolean() ?: false
     subprojects {
         val subproject = this
         // Checking for MPP beforeEvaluate is too early, and in afterEvaluate too late because node plugin breaks
@@ -28,13 +27,15 @@ fun Project.configureNativeMultiplatform() {
                 return@withPlugin
             }
 
-            val useNativeBuildInfraInIdea = subproject.findProperty("useNativeBuildInfraInIdea")?.toString()?.toBoolean() ?: false
             val commonMain = kotlin.sourceSets.getByName("commonMain")
             val commonTest = kotlin.sourceSets.getByName("commonTest")
+
+            val ideaActive = System.getProperty("idea.active")?.toBoolean() == true
+            val useNativeBuildInfraInIdea = subproject.findProperty("useNativeBuildInfraInIdea")?.toString()?.toBoolean() == true
             val extension: Any = if (ideaActive && !useNativeBuildInfraInIdea)
-                NativeIdeaInfraExtension(subproject, kotlin, "native", commonMain, commonTest)
+                PreHmppIdeaNativeInfraExtension(subproject, kotlin, "native", commonMain, commonTest)
             else
-                NativeBuildInfraExtension(subproject, kotlin, "native", commonMain, commonTest)
+                StandardNativeInfraExtension(subproject, kotlin, "native", commonMain, commonTest)
 
             (kotlin as ExtensionAware).extensions.add("infra", extension)
         }
@@ -65,7 +66,45 @@ abstract class NativeInfraExtension(
     abstract fun common(name: String, configure: NativeInfraExtension.() -> Unit)
 }
 
-class NativeIdeaInfraExtension(
+class StandardNativeInfraExtension(
+    project: Project,
+    kotlin: KotlinMultiplatformExtension,
+    sourceSetName: String,
+    commonMainSourceSet: KotlinSourceSet,
+    commonTestSourceSet: KotlinSourceSet,
+) : NativeInfraExtension(project, kotlin, sourceSetName, commonMainSourceSet, commonTestSourceSet) {
+
+    private val nativePresets = kotlin.presets.filterIsInstance<AbstractKotlinNativeTargetPreset<*>>()
+
+    init {
+        project.logger.infra("Configuring native targets for $project for build")
+        project.logger.infra("Enabled native targets: ${nativePresets.joinToString { it.name }}")
+    }
+
+    override fun target(name: String, configure: KotlinNativeTarget.() -> Unit) {
+        val preset = nativePresets.singleOrNull { it.name == name } ?: return
+        project.logger.infra("Creating target '${preset.name}' with dependency on '$sourceSetName'")
+
+        kotlin.targetFromPreset(preset) {
+            configure()
+            sharedConfigs.forEach { config -> config() }
+        }
+
+        kotlin.sourceSets.getByName("${preset.name}Main") {
+            dependsOn(mainSourceSet)
+        }
+        kotlin.sourceSets.getByName("${preset.name}Test") {
+            dependsOn(testSourceSet)
+        }
+    }
+
+    override fun common(name: String, configure: NativeInfraExtension.() -> Unit) {
+        val extension = StandardNativeInfraExtension(project, kotlin, name, mainSourceSet, testSourceSet)
+        extension.configure()
+    }
+}
+
+class PreHmppIdeaNativeInfraExtension(
     project: Project,
     kotlin: KotlinMultiplatformExtension,
     sourceSetName: String,
@@ -106,45 +145,7 @@ class NativeIdeaInfraExtension(
     }
 
     override fun common(name: String, configure: NativeInfraExtension.() -> Unit) {
-        val extension = NativeIdeaInfraExtension(project, kotlin, name, mainSourceSet, testSourceSet)
-        extension.configure()
-    }
-}
-
-class NativeBuildInfraExtension(
-    project: Project,
-    kotlin: KotlinMultiplatformExtension,
-    sourceSetName: String,
-    commonMainSourceSet: KotlinSourceSet,
-    commonTestSourceSet: KotlinSourceSet,
-) : NativeInfraExtension(project, kotlin, sourceSetName, commonMainSourceSet, commonTestSourceSet) {
-
-    private val nativePresets = kotlin.presets.filterIsInstance<AbstractKotlinNativeTargetPreset<*>>()
-
-    init {
-        project.logger.infra("Configuring native targets for $project for build")
-        project.logger.infra("Enabled native targets: ${nativePresets.joinToString { it.name }}")
-    }
-
-    override fun target(name: String, configure: KotlinNativeTarget.() -> Unit) {
-        val preset = nativePresets.singleOrNull { it.name == name } ?: return
-        project.logger.infra("Creating target '${preset.name}' with dependency on '$sourceSetName'")
-
-        val target = kotlin.targetFromPreset(preset) {
-            configure()
-            sharedConfigs.forEach { config -> config() }
-        }
-
-        kotlin.sourceSets.getByName("${preset.name}Main") {
-            dependsOn(mainSourceSet)
-        }
-        kotlin.sourceSets.getByName("${preset.name}Test") {
-            dependsOn(testSourceSet)
-        }
-    }
-
-    override fun common(name: String, configure: NativeInfraExtension.() -> Unit) {
-        val extension = NativeBuildInfraExtension(project, kotlin, name, mainSourceSet, testSourceSet)
+        val extension = PreHmppIdeaNativeInfraExtension(project, kotlin, name, mainSourceSet, testSourceSet)
         extension.configure()
     }
 }
