@@ -1,6 +1,5 @@
 package kotlinx.team.infra
 
-import groovy.lang.*
 import org.gradle.api.*
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.plugins.*
@@ -11,13 +10,10 @@ import org.gradle.api.publish.maven.plugins.*
 import org.gradle.api.publish.maven.tasks.*
 import org.gradle.api.publish.plugins.*
 import org.gradle.api.tasks.*
-import org.gradle.jvm.tasks.Jar
+import org.gradle.api.tasks.bundling.Jar
 import org.gradle.plugins.signing.SigningExtension
 import org.gradle.plugins.signing.SigningPlugin
-import org.gradle.util.*
 import java.net.*
-import java.text.*
-import java.util.*
 import javax.inject.Inject
 
 open class PublishingConfiguration @Inject constructor(val objects: ObjectFactory) {
