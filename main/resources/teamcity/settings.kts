@@ -50,18 +50,18 @@ project {
             reuseBuilds = ReuseBuilds.NO
         }
     }
-    val deploys = platforms.map { deploy(it, deployVersion) }
+    val deploys = platforms.associateWith { deploy(it, deployVersion) }
     val deployPublish = deployPublish(deployVersion).apply {
         dependsOnSnapshot(buildAll, onFailure = FailureAction.IGNORE)
         dependsOnSnapshot(BUILD_CREATE_STAGING_REPO_ABSOLUTE_ID) {
             reuseBuilds = ReuseBuilds.NO
         }
-        deploys.forEach {
-            dependsOnSnapshot(it)
-        }
+        deploys
+            .filter { (platform, _) -> !singleAgentMacDeployment || platform == Platform.MacOS }
+            .forEach { dependsOnSnapshot(it.value) }
     }
 
-    buildTypesOrder = listOf(buildAll, buildVersion, *builds.toTypedArray(), deployPublish, deployVersion, *deploys.toTypedArray())
+    buildTypesOrder = listOf(buildAll, buildVersion, *builds.toTypedArray(), deployPublish, deployVersion, *deploys.values.toTypedArray())
 
     additionalConfiguration()
 }

@@ -10,6 +10,7 @@ const val teamcitySuffixParameter = "teamcitySuffix"
 const val releaseVersionParameter = "releaseVersion"
 
 const val libraryStagingRepoDescription = "<<LIBRARY_STAGING_REPO_DESCRIPTION>>"
+const val singleAgentMacDeployment: Boolean = <<SINGLE_AGENT_MAC_DEPLOYMENT>>
 
 val platforms = Platform.values()
 const val jdk = "<<JDK>>"
