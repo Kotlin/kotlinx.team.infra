@@ -35,8 +35,6 @@ class InfraPlugin : Plugin<Project> {
             configurePublishing(it)
         }
 
-        configureNativeMultiplatform()
-
         subprojects {
             applyModule()
         }
