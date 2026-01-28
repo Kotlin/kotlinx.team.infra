@@ -12,11 +12,11 @@ publishing {
             url = "$rootProject.buildDir/maven"
         }
         maven {
-            name = 'space'
-            url "https://maven.pkg.jetbrains.space/kotlin/p/kotlinx/maven"
+            name = 'jetbrains.team'
+            url "https://packages.jetbrains.team/maven/p/kotlinx-team-infra/maven"
             credentials {
-                username = project.findProperty("space.user")
-                password = project.findProperty("space.token")
+                username = project.findProperty("jetbrains.team.user")
+                password = project.findProperty("jetbrains.team.token")
             }
         }
     }
