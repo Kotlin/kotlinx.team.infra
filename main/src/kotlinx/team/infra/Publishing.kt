@@ -25,6 +25,12 @@ open class PublishingConfiguration @Inject constructor(val objects: ObjectFactor
         sonatype.isSelected = true
     }
 
+    val central = objects.newInstance<CentralViaSpaceConfiguration>()
+    fun central(configure: Action<CentralViaSpaceConfiguration>) {
+        configure.execute(central)
+        central.isSelected = true
+    }
+
     var includeProjects: MutableList<String> = mutableListOf()
     fun include(vararg name: String) {
         includeProjects.addAll(name)
@@ -42,8 +48,9 @@ open class SonatypeConfiguration {
     internal var isSelected: Boolean = false
 }
 
-// TODO: Add space configuration
-
+open class CentralViaSpaceConfiguration {
+    internal var isSelected: Boolean = false
+}
 
 fun Project.configureProjectVersion() {
     val ext = extensions.getByType(ExtraPropertiesExtension::class.java)
@@ -87,6 +94,13 @@ internal fun Project.configurePublishing(publishing: PublishingConfiguration) {
         if (verifySonatypeConfiguration()) {
             includeProjects.forEach { subproject ->
                 subproject.createSonatypeRepository()
+            }
+        }
+    }
+    if (publishing.central.isSelected) {
+        if (verifyCentralViaSpaceConfiguration()) {
+            includeProjects.forEach { subproject ->
+                subproject.createCentralViaSpaceRepository()
             }
         }
     }
@@ -173,7 +187,43 @@ private fun Project.verifySonatypeConfiguration(): Boolean {
 
     sonatypeUsername ?: return missing("username")
     val password = sonatypePassword ?: return missing("password")
+    return verifyRepositoryPassword(password)
+}
 
+private fun Project.createSonatypeRepository() {
+    val username = project.sonatypeUsername
+        ?: throw KotlinInfrastructureException("Cannot setup publication. User has not been specified.")
+    val password =  project.sonatypePassword
+        ?: throw KotlinInfrastructureException("Cannot setup publication. Password (API key) has not been specified.")
+
+    extensions.configure(PublishingExtension::class.java) {
+        repositories.maven {
+            name = "sonatype"
+            url = sonatypeRepositoryUri()
+            credentials {
+                this.username = username
+                this.password = password.trim()
+            }
+        }
+    }
+}
+
+private fun Project.verifyCentralViaSpaceConfiguration(): Boolean {
+    fun missing(what: String): Boolean {
+        logger.warn("INFRA: Space publishing will not be possible due to missing $what.")
+        return false
+    }
+
+    if (spaceCentralRepository.isNullOrEmpty()) {
+        return missing("repository url 'libs.repo.url'.")
+    }
+
+    spaceCentralUsername ?: return missing("username")
+    val password = spaceCentralPassword ?: return missing("password")
+    return verifyRepositoryPassword(password)
+}
+
+private fun Project.verifyRepositoryPassword(password: String): Boolean {
     if (password.startsWith("credentialsJSON")) {
         logger.warn("INFRA: API key secure token was not expanded, publishing is not possible.")
         return false
@@ -189,16 +239,18 @@ private fun Project.verifySonatypeConfiguration(): Boolean {
     return true
 }
 
-private fun Project.createSonatypeRepository() {
-    val username = project.sonatypeUsername
+private fun Project.createCentralViaSpaceRepository() {
+    val url = project.spaceCentralRepository
+        ?: throw KotlinInfrastructureException("Cannot setup publication. Repository URL has not been specified.")
+    val username = project.spaceCentralUsername
         ?: throw KotlinInfrastructureException("Cannot setup publication. User has not been specified.")
-    val password =  project.sonatypePassword
+    val password =  project.spaceCentralPassword
         ?: throw KotlinInfrastructureException("Cannot setup publication. Password (API key) has not been specified.")
 
     extensions.configure(PublishingExtension::class.java) {
         repositories.maven {
-            name = "sonatype"
-            url = sonatypeRepositoryUri()
+            name = "Central"
+            this.url = uri(url)
             credentials {
                 this.username = username
                 this.password = password.trim()
@@ -300,3 +352,7 @@ private fun Project.sonatypeRepositoryUri(): URI {
 private val Project.stagingRepositoryId: String? get() = propertyOrEnv("libs.repository.id")
 private val Project.sonatypeUsername: String? get() = propertyOrEnv("libs.sonatype.user")
 private val Project.sonatypePassword: String? get() = propertyOrEnv("libs.sonatype.password")
+
+private val Project.spaceCentralRepository: String? get() = propertyOrEnv("libs.repo.url")
+private val Project.spaceCentralUsername: String? get() = propertyOrEnv("libs.repo.user")
+private val Project.spaceCentralPassword: String? get() = propertyOrEnv("libs.repo.password")
