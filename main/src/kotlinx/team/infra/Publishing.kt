@@ -1,7 +1,6 @@
 package kotlinx.team.infra
 
 import org.gradle.api.*
-import org.gradle.api.model.ObjectFactory
 import org.gradle.api.plugins.*
 import org.gradle.api.publish.*
 import org.gradle.api.publish.maven.MavenPom
@@ -13,37 +12,16 @@ import org.gradle.api.tasks.*
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.plugins.signing.SigningExtension
 import org.gradle.plugins.signing.SigningPlugin
-import java.net.*
 import javax.inject.Inject
 
-open class PublishingConfiguration @Inject constructor(val objects: ObjectFactory) {
+open class PublishingConfiguration @Inject constructor() {
     var libraryRepoUrl: String? = null
-
-    val sonatype = objects.newInstance<SonatypeConfiguration>()
-    fun sonatype(configure: Action<SonatypeConfiguration>) {
-        configure.execute(sonatype)
-        sonatype.isSelected = true
-    }
 
     var includeProjects: MutableList<String> = mutableListOf()
     fun include(vararg name: String) {
         includeProjects.addAll(name)
     }
 }
-
-open class SonatypeConfiguration {
-    var libraryStagingRepoDescription: String? = null
-
-    // other information is provided with properties or env. variables with known names:
-    // - libs.repository.id: sonatype staging repository id, 'auto' to open staging implicitly,
-    // - libs.sonatype.user: sonatype user name
-    // - libs.sonatype.password: sonatype password
-    // - libs.sign.key.id, libs.sign.key.private, libs.sign.passphrase: publication signing information
-    internal var isSelected: Boolean = false
-}
-
-// TODO: Add space configuration
-
 
 fun Project.configureProjectVersion() {
     val ext = extensions.getByType(ExtraPropertiesExtension::class.java)
@@ -82,14 +60,6 @@ internal fun Project.configurePublishing(publishing: PublishingConfiguration) {
     }
 
     createVersionPrepareTask(publishing)
-
-    if (publishing.sonatype.isSelected) {
-        if (verifySonatypeConfiguration()) {
-            includeProjects.forEach { subproject ->
-                subproject.createSonatypeRepository()
-            }
-        }
-    }
 
     if (project.hasProperty("teamcity")) {
         includeProjects.forEach { subproject ->
@@ -151,59 +121,7 @@ private fun Project.createBuildRepository(name: String, rootBuildLocal: Task) {
 private fun Project.createVersionPrepareTask(publishing: PublishingConfiguration): TaskProvider<DefaultTask> {
     return task<DefaultTask>("publishPrepareVersion") {
         group = PublishingPlugin.PUBLISH_TASK_GROUP
-        doFirst {
-            val ext = project.extensions.getByType(ExtraPropertiesExtension::class.java)
-            if (publishing.sonatype.isSelected && ext.get("infra.release") != true) {
-                throw KotlinInfrastructureException("Cannot publish development version to Sonatype.")
-            }
-        }
-    }
-}
-
-
-private fun Project.verifySonatypeConfiguration(): Boolean {
-    fun missing(what: String): Boolean {
-        logger.warn("INFRA: Sonatype publishing will not be possible due to missing $what.")
-        return false
-    }
-
-    if (stagingRepositoryId.isNullOrEmpty()) {
-        return missing("staging repository id 'libs.repository.id'. Pass 'auto' for implicit staging")
-    }
-
-    sonatypeUsername ?: return missing("username")
-    val password = sonatypePassword ?: return missing("password")
-
-    if (password.startsWith("credentialsJSON")) {
-        logger.warn("INFRA: API key secure token was not expanded, publishing is not possible.")
-        return false
-    }
-
-    if (password.trim() != password) {
-        logger.warn("INFRA: API key secure token was expanded to a value with whitespace around it.")
-    }
-
-    if (password.trim().isEmpty()) {
-        logger.warn("INFRA: API key secure token was expanded to empty string.")
-    }
-    return true
-}
-
-private fun Project.createSonatypeRepository() {
-    val username = project.sonatypeUsername
-        ?: throw KotlinInfrastructureException("Cannot setup publication. User has not been specified.")
-    val password =  project.sonatypePassword
-        ?: throw KotlinInfrastructureException("Cannot setup publication. Password (API key) has not been specified.")
-
-    extensions.configure(PublishingExtension::class.java) {
-        repositories.maven {
-            name = "sonatype"
-            url = sonatypeRepositoryUri()
-            credentials {
-                this.username = username
-                this.password = password.trim()
-            }
-        }
+        // TODO: do we still need some verification here?
     }
 }
 
@@ -279,24 +197,3 @@ private fun Project.configureSigning() {
         logger.warn("INFRA: signing key id is not specified, artifact signing is not enabled.")
     }
 }
-
-
-private fun Project.sonatypeRepositoryUri(): URI {
-    val repositoryId: String? = stagingRepositoryId
-    return when {
-        repositoryId.isNullOrEmpty() ->
-            throw KotlinInfrastructureException("Staging repository id 'libs.repository.id' is not specified.")
-        repositoryId == "auto" -> {
-            // Using implicitly created staging, for MPP it's likely a mistake
-            logger.warn("INFRA: using an implicitly created staging for ${project.rootProject.name}")
-            URI("https://oss.sonatype.org/service/local/staging/deploy/maven2/")
-        }
-        else -> {
-            URI("https://oss.sonatype.org/service/local/staging/deployByRepositoryId/$repositoryId")
-        }
-    }
-}
-
-private val Project.stagingRepositoryId: String? get() = propertyOrEnv("libs.repository.id")
-private val Project.sonatypeUsername: String? get() = propertyOrEnv("libs.sonatype.user")
-private val Project.sonatypePassword: String? get() = propertyOrEnv("libs.sonatype.password")

@@ -4,9 +4,6 @@ import org.gradle.api.*
 import java.io.*
 
 open class TeamCityConfiguration {
-    @Deprecated("Configure libraryStagingRepoDescription in infra/publishing/sonatype")
-    var libraryStagingRepoDescription: String? = null
-
     var jdk = "JDK_18"
 
     /**
@@ -50,11 +47,7 @@ fun Project.configureTeamCityConfigGenerator(teamcity: TeamCityConfiguration, pu
             }
             @Suppress("DEPRECATION")
             copyResource(teamcityDir, "utils.kt") { text ->
-                val libraryStagingRepoDescription = publishing.sonatype.libraryStagingRepoDescription ?: teamcity.libraryStagingRepoDescription
-                    ?: throw KotlinInfrastructureException("TeamCity configuration should specify `libraryStagingRepoDescription`: the library description for staging repositories")
-                text
-                    .replace("<<LIBRARY_STAGING_REPO_DESCRIPTION>>", libraryStagingRepoDescription)
-                    .replace("<<JDK>>", teamcity.jdk)
+                    text.replace("<<JDK>>", teamcity.jdk)
             }
             copyResource(teamcityDir, "additionalConfiguration.kt", override = false)
             copyResource(teamcityDir, "settings.kts")
