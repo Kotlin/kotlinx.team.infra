@@ -258,12 +258,12 @@ private fun MavenPublication.configureRequiredPomAttributes(project: Project, pu
 }
 
 private fun Project.configureSigning() {
-    project.pluginManager.apply(SigningPlugin::class.java)
     val keyId = project.propertyOrEnv("libs.sign.key.id")
     val signingKey = project.propertyOrEnv("libs.sign.key.private")
     val signingKeyPassphrase = project.propertyOrEnv("libs.sign.passphrase")
 
     if (keyId != null) {
+        project.pluginManager.apply(SigningPlugin::class.java)
         project.extensions.configure<SigningExtension>("signing") {
             useInMemoryPgpKeys(keyId, signingKey, signingKeyPassphrase)
             val signingTasks = sign(extensions.getByType(PublishingExtension::class.java).publications) // all publications
