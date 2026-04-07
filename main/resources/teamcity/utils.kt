@@ -8,6 +8,7 @@ import jetbrains.buildServer.configs.kotlin.*
 const val versionSuffixParameter = "versionSuffix"
 const val teamcitySuffixParameter = "teamcitySuffix"
 const val releaseVersionParameter = "releaseVersion"
+const val publicationCommandParameter = "publicationCommandParameter"
 
 const val libraryStagingRepoDescription = "<<LIBRARY_STAGING_REPO_DESCRIPTION>>"
 

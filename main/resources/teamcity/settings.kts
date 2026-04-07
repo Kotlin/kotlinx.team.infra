@@ -256,6 +256,7 @@ fun Project.buildArtifacts(deployVersion: BuildType, platform: Platform) = build
 
     params {
         param(versionSuffixParameter, "${deployVersion.depParamRefs[versionSuffixParameter]}")
+        param(publicationCommandParameter, "publishAllPublicationsToBuildLocalRepository")
     }
 
     steps {
@@ -264,7 +265,7 @@ fun Project.buildArtifacts(deployVersion: BuildType, platform: Platform) = build
             jdkHome = "%env.$jdk%"
             jvmArgs = "-Xmx1g"
             gradleParams = "--info --stacktrace -P$versionSuffixParameter=%$versionSuffixParameter% -P$releaseVersionParameter=%$releaseVersionParameter%"
-            tasks = "clean publishAllPublicationsToBuildLocalRepository"
+            tasks = "clean %publicationCommand%"
             buildFile = ""
             gradleWrapperPath = ""
         }
