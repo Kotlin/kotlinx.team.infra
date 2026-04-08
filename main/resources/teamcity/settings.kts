@@ -175,7 +175,13 @@ fun Project.deployAll(deployVersion: BuildType) = BuildType {
     dependsOnSnapshot(deployVersion)
 
     params {
-        text("reverse.dep.*.$releaseVersionParameter", "", label = "Version", description = "Version of artifacts to deploy", display = ParameterDisplay.PROMPT, allowEmpty = false)
+        text("reverse.dep.*.$releaseVersionParameter", "",
+            label = "Version",
+            description = "Version of artifacts to deploy",
+            display = ParameterDisplay.PROMPT,
+            regex = "[0-9]+\\.[0-9]+\\.[0-9]+(-.+)?",
+            validationMessage = "It does not look like a proper version"
+        )
     }
 }.also { buildType(it) }
 
@@ -247,6 +253,8 @@ fun Project.deployPublish(deployVersion: BuildType) = BuildType {
 
     params {
         param("DeployVersion", "%$releaseVersionParameter%")
+        // Override parameter from the template
+        param("Approvers", DslContext.getParameter("Approvers", "<nobody>"))
     }
 }.also { buildType(it) }
 
