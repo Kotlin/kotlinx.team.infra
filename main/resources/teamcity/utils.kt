@@ -10,6 +10,8 @@ const val teamcitySuffixParameter = "teamcitySuffix"
 const val releaseVersionParameter = "releaseVersion"
 const val publicationCommandParameter = "publicationCommand"
 
+const val singleAgentMacDeployment: Boolean = <<SINGLE_AGENT_MAC_DEPLOYMENT>>
+
 val platforms = Platform.values()
 const val jdk = "<<JDK>>"
 

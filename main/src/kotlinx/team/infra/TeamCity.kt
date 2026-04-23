@@ -48,6 +48,7 @@ fun Project.configureTeamCityConfigGenerator(teamcity: TeamCityConfiguration, pu
             @Suppress("DEPRECATION")
             copyResource(teamcityDir, "utils.kt") { text ->
                     text.replace("<<JDK>>", teamcity.jdk)
+                    .replace("<<SINGLE_AGENT_MAC_DEPLOYMENT>>", publishing.singleAgentMacDeployment.toString())
             }
             copyResource(teamcityDir, "additionalConfiguration.kt", override = false)
             copyResource(teamcityDir, "settings.kts")
