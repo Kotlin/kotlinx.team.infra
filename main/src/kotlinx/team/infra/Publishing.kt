@@ -23,9 +23,9 @@ open class PublishingConfiguration @Inject constructor() {
     }
 
     /**
-     * Build all artifacts for publishing and deploy them from a single mac agent.
+     * Build all artifacts for publishing and deploy them from a single macOS agent.
      */
-    var singleAgentMacDeployment: Boolean = false
+    var singleAgentMacDeployment: Boolean = true
 }
 
 fun Project.configureProjectVersion() {
