@@ -21,6 +21,11 @@ open class PublishingConfiguration @Inject constructor() {
     fun include(vararg name: String) {
         includeProjects.addAll(name)
     }
+
+    /**
+     * Build all artifacts for publishing and deploy them from a single macOS agent.
+     */
+    var singleAgentMacDeployment: Boolean = true
 }
 
 fun Project.configureProjectVersion() {
