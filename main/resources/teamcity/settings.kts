@@ -59,7 +59,7 @@ project {
         val deploys = platforms.associateWith { buildArtifacts(deployVersion, it) }
         val deployUpload = deployUpload(deployVersion).apply {
             dependencies {
-                deploys.forEach { dep ->
+                deploys.forEach { (_, dep) ->
                     dependency(dep) {
                         snapshot {
                             onDependencyFailure = FailureAction.FAIL_TO_START
