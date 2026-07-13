@@ -57,9 +57,10 @@ project {
         val deployVersion = deployVersion()
         val deployAll = deployAll(deployVersion)
         val deploys = platforms.associateWith { buildArtifacts(deployVersion, it) }
+        val deploysFiltered = deploys.filter { (platform, _) -> !singleAgentMacDeployment || platform == Platform.MacOS }
         val deployUpload = deployUpload(deployVersion).apply {
             dependencies {
-                deploys.forEach { (_, dep) ->
+                deploysFiltered.forEach { (_, dep) ->
                     dependency(dep) {
                         snapshot {
                             onDependencyFailure = FailureAction.FAIL_TO_START
@@ -74,9 +75,7 @@ project {
         }
         val deployPublish = deployPublish(deployVersion, deployUpload)
 
-        deploys
-            .filter { (platform, _) -> !singleAgentMacDeployment || platform == Platform.MacOS }
-            .forEach { deployAll.dependsOnSnapshot(it.value) }
+        deploysFiltered.forEach { deployAll.dependsOnSnapshot(it.value) }
 
         deployAll.dependsOnSnapshot(deployUpload) {
             reuseBuilds = ReuseBuilds.NO
